@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'shared/theme/app_theme.dart';
 
 import 'features/connection/controllers/connection_controller.dart';
 import 'features/grid/screens/grid_screen.dart';
 import 'features/pairing/screens/pairing_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeRight,
+    DeviceOrientation.landscapeLeft,
+  ]);
   runApp(const ProviderScope(child: DashKeyApp()));
 }
 
