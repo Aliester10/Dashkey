@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+
+import '../../core/feedback/feedback_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
-import 'neumorphic_button.dart';
+import 'dashkey_button.dart';
 
+/// Kartu aksi tombol di grid — berbasis DashKeyButton (tactile feedback).
 class ActionCard extends StatelessWidget {
   final String actionName;
   final Widget icon;
   final Color? accentColor;
   final VoidCallback? onTap;
+
+  /// State persistent aktif (mis. mic muted) — PRD §2.3.
+  final bool active;
+
+  /// Jenis haptic (PRD §5 mapping).
+  final DashHaptic haptic;
 
   const ActionCard({
     super.key,
@@ -15,29 +24,35 @@ class ActionCard extends StatelessWidget {
     required this.icon,
     this.accentColor,
     this.onTap,
+    this.active = false,
+    this.haptic = DashHaptic.light,
   });
 
   @override
   Widget build(BuildContext context) {
-    return NeumorphicButton(
-      onTap: onTap,
+    return DashKeyButton(
+      onPressed: onTap,
+      disabled: onTap == null,
+      active: active,
+      accentColor: accentColor,
+      haptic: haptic,
       borderRadius: 20.0,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [AppColors.surfaceHighlight, AppColors.surfaceDeep],
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.lightBorder),
                 boxShadow: AppShadows.pressed,
               ),
@@ -45,13 +60,13 @@ class ActionCard extends StatelessWidget {
                 child: IconTheme(
                   data: IconThemeData(
                     color: accentColor ?? AppColors.primaryText,
-                    size: 29,
+                    size: 27,
                   ),
                   child: icon,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               actionName,
               textAlign: TextAlign.center,
@@ -62,7 +77,7 @@ class ActionCard extends StatelessWidget {
                   ),
             ),
             if (accentColor != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Container(
                 width: 24,
                 height: 4,
