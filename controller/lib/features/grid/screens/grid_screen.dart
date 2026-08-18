@@ -86,8 +86,10 @@ class GridScreen extends ConsumerWidget {
       trailingHeader: _buildHeaderActions(context, ref, config, trackpadPage),
       body: page.isTrackpad
           ? TrackpadScreen(pageName: page.name, embedded: true)
-          : LayoutBuilder(
-              builder: (context, constraints) {
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
                 // Determine columns based on orientation / width
                 final int cols = MediaQuery.of(context).size.width < 800 ? 2 : page.gridSize.cols;
                 // Determine rows to fit all buttons
@@ -106,6 +108,7 @@ class GridScreen extends ConsumerWidget {
                 final double aspectRatio = (itemHeight > 0) ? (itemWidth / itemHeight) : 1.0;
 
                 return GridView.builder(
+                  padding: EdgeInsets.zero,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: cols,
