@@ -91,7 +91,8 @@ class GridScreen extends ConsumerWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                 // Determine columns based on orientation / width
-                final int cols = MediaQuery.of(context).size.width < 800 ? 2 : page.gridSize.cols;
+                final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+                final int cols = isPortrait ? 2 : page.gridSize.cols;
                 // Determine rows to fit all buttons
                 final int rows = (page.buttons.length / cols).ceil();
                 
