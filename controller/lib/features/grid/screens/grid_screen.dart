@@ -86,21 +86,42 @@ class GridScreen extends ConsumerWidget {
       trailingHeader: _buildHeaderActions(context, ref, config, trackpadPage),
       body: page.isTrackpad
           ? TrackpadScreen(pageName: page.name, embedded: true)
-          : GridView.builder(
-              padding: const EdgeInsets.only(bottom: 24),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width < 800 ? 2 : page.gridSize.cols,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: page.buttons.length,
-              itemBuilder: (context, i) {
-                final buttonId = page.buttons[i];
-                final button = config.buttons[buttonId];
-                if (button == null) return const SizedBox.shrink();
-                final dynamic = conn.buttonStates[buttonId];
-                return _buildActionCard(ref, button, page.pageId, dynamic);
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                // Determine columns based on orientation / width
+                final int cols = MediaQuery.of(context).size.width < 800 ? 2 : page.gridSize.cols;
+                // Determine rows to fit all buttons
+                final int rows = (page.buttons.length / cols).ceil();
+                
+                // Calculate spacing
+                const double spacing = 16.0;
+                final double totalCrossAxisSpacing = (cols > 1 ? cols - 1 : 0) * spacing;
+                final double totalMainAxisSpacing = (rows > 1 ? rows - 1 : 0) * spacing;
+                
+                // Calculate item dimensions to perfectly fill the space
+                final double itemWidth = (constraints.maxWidth - totalCrossAxisSpacing) / cols;
+                final double itemHeight = (constraints.maxHeight - totalMainAxisSpacing) / rows;
+                
+                // Protect against zero or negative height during layout phase
+                final double aspectRatio = (itemHeight > 0) ? (itemWidth / itemHeight) : 1.0;
+
+                return GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    mainAxisSpacing: spacing,
+                    crossAxisSpacing: spacing,
+                    childAspectRatio: aspectRatio,
+                  ),
+                  itemCount: page.buttons.length,
+                  itemBuilder: (context, i) {
+                    final buttonId = page.buttons[i];
+                    final button = config.buttons[buttonId];
+                    if (button == null) return const SizedBox.shrink();
+                    final dynamic = conn.buttonStates[buttonId];
+                    return _buildActionCard(ref, button, page.pageId, dynamic);
+                  },
+                );
               },
             ),
     );
