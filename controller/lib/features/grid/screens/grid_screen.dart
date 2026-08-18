@@ -5,6 +5,7 @@ import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter/physics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/feedback/dashkey_haptic.dart';
 import '../../../core/model/config.dart';
 import '../../clock/presentation/pages/clock_page.dart';
 import '../../connection/controllers/connection_controller.dart';
@@ -13,7 +14,7 @@ import '../../settings/settings_screen.dart';
 import '../../trackpad/trackpad_screen.dart';
 import '../widgets/button_icon.dart';
 import '../../../shared/widgets/action_card.dart';
-import '../../../shared/widgets/neumorphic_button.dart';
+import '../../../shared/widgets/dashkey_button.dart';
 import '../../../shared/theme/app_colors.dart';
 
 class GridScreen extends ConsumerStatefulWidget {
@@ -241,8 +242,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        NeumorphicButton(
-          onTap: onTap,
+        DashKeyButton(
+          onPressed: onTap,
           borderRadius: 16,
           padding: const EdgeInsets.all(16),
           child: Icon(icon, color: AppColors.primaryText, size: 28),
@@ -293,6 +294,9 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       actionName: button.label,
       icon: iconWidget,
       accentColor: overrideColor ?? (active ? AppColors.dangerRed : null),
+      active: active,
+      // PRD §5: toggle/obs → selection/medium, sisanya light.
+      haptic: hapticForAction(button.actions.firstOrNull?.actionType),
       onTap: () => ref
           .read(connectionControllerProvider.notifier)
           .pressButton(button.buttonId, pageId),
