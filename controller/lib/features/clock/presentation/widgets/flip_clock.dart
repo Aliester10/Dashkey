@@ -20,11 +20,13 @@ class FlipClock extends ConsumerWidget {
     super.key,
     required this.cardWidth,
     required this.cardHeight,
+    this.showSeconds = true,
   });
 
   /// Ukuran kartu (dihitung responsif oleh ClockPage).
   final double cardWidth;
   final double cardHeight;
+  final bool showSeconds;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,9 +37,11 @@ class FlipClock extends ConsumerWidget {
       (now.hour % 10),
       (now.minute ~/ 10),
       (now.minute % 10),
-      (now.second ~/ 10),
-      (now.second % 10),
+      if (showSeconds) (now.second ~/ 10),
+      if (showSeconds) (now.second % 10),
     ];
+
+    final totalDigits = showSeconds ? 6 : 4;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -46,7 +50,7 @@ class FlipClock extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            for (var i = 0; i < 6; i++) ...[
+            for (var i = 0; i < totalDigits; i++) ...[
               _DigitSlot(
                 value: digits[i],
                 cardWidth: cardWidth,
@@ -54,9 +58,9 @@ class FlipClock extends ConsumerWidget {
                 position: i,
                 now: now,
               ),
-              if (i == 1 || i == 3)
+              if (i == 1 || (showSeconds && i == 3))
                 FlipSeparator(height: cardHeight)
-              else if (i < 5)
+              else if (i < totalDigits - 1)
                 SizedBox(width: cardWidth * 0.10),
             ],
           ],

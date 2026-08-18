@@ -19,6 +19,8 @@ class ClockPage extends StatefulWidget {
 }
 
 class _ClockPageState extends State<ClockPage> {
+  bool _showSeconds = true;
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +41,11 @@ class _ClockPageState extends State<ClockPage> {
       backgroundColor: const Color(0xFF0F1115),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onDoubleTap: () {
+          setState(() {
+            _showSeconds = !_showSeconds;
+          });
+        },
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -64,10 +71,14 @@ class _ClockPageState extends State<ClockPage> {
         : (availH * 0.48).clamp(160.0, 300.0);
     var cardWidth = cardHeight * 0.58;
 
-    // Estimasi lebar total: 6 kartu + 2 separator + 3 gap.
+    // Estimasi lebar total bergantung format waktu.
+    final numCards = _showSeconds ? 6 : 4;
+    final numSeparators = _showSeconds ? 2 : 1;
+    final numGaps = _showSeconds ? 3 : 2;
+
     final gap = cardWidth * 0.10;
     final separatorW = cardHeight * 0.18;
-    final totalW = cardWidth * 6 + separatorW * 2 + gap * 3;
+    final totalW = cardWidth * numCards + separatorW * numSeparators + gap * numGaps;
 
     // Skala turun bila melebihi lebar layar (anti overflow).
     if (totalW > availW) {
@@ -86,7 +97,11 @@ class _ClockPageState extends State<ClockPage> {
 
     return Center(
       child: SingleChildScrollView(
-        child: FlipClock(cardWidth: cardWidth, cardHeight: cardHeight),
+        child: FlipClock(
+          cardWidth: cardWidth,
+          cardHeight: cardHeight,
+          showSeconds: _showSeconds,
+        ),
       ),
     );
   }
