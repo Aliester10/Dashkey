@@ -1,0 +1,36 @@
+# Rust (Host)
+host/target/
+**/*.rs.bk
+
+# Flutter (Controller)
+controller/build/
+controller/.dart_tool/
+controller/.flutter-plugins
+controller/.flutter-plugins-dependencies
+controller/.packages
+controller/.pub-cache/
+controller/.pub/
+controller/android/.gradle/
+controller/android/local.properties
+controller/android/app/.cxx/
+controller/android/app/build/
+controller/ios/Pods/
+controller/ios/.symlinks/
+controller/ios/Flutter/Generated.xcconfig
+controller/ios/Flutter/ephemeral/
+controller/macos/Flutter/ephemeral/
+controller/linux/flutter/ephemeral/
+controller/linux/flutter/generated_plugin_registrant.cc
+controller/linux/flutter/generated_plugin_registrant.h
+controller/windows/flutter/ephemeral/
+
+# IDE & OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.swp
+
+# Log & temp
+*.log
+/tmp/
