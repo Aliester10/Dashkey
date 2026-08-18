@@ -23,61 +23,64 @@ class ActionCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: 20.0,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.surfaceHighlight, AppColors.surfaceDeep],
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.lightBorder),
-              boxShadow: AppShadows.pressed,
-            ),
-            child: Center(
-              child: IconTheme(
-                data: IconThemeData(
-                  color: accentColor ?? AppColors.primaryText,
-                  size: 29,
-                ),
-                child: icon,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            actionName,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-          ),
-          if (accentColor != null) ...[
-            const SizedBox(height: 8),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Container(
-              width: 24,
-              height: 4,
+              width: 58,
+              height: 58,
               decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: [
-                  BoxShadow(
-                    color: accentColor!.withOpacity(0.5),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.surfaceHighlight, AppColors.surfaceDeep],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.lightBorder),
+                boxShadow: AppShadows.pressed,
+              ),
+              child: Center(
+                child: IconTheme(
+                  data: IconThemeData(
+                    color: accentColor ?? AppColors.primaryText,
+                    size: 29,
                   ),
-                ],
+                  child: icon,
+                ),
               ),
             ),
+            const SizedBox(height: 12),
+            Text(
+              actionName,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            if (accentColor != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: 24,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor!.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
