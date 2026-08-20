@@ -1,29 +1,64 @@
-//! Ikon Unicode untuk DashKey GUI.
+#![allow(dead_code)]
+//! Ikon Phosphor (regular) untuk DashKey GUI.
 //!
-//! Menggantikan egui-phosphor dengan karakter Unicode / emoji standar
-//! agar tidak ada konflik versi egui/epaint antara crate.
-//! Semua ikon dipilih dari Unicode Symbols & Miscellaneous block
-//! yang secara umum tersedia di font sistem.
+//! Codepoint diambil dari font `assets/fonts/Phosphor-Regular.ttf`
+//! (diekstrak dari CSS resmi @phosphor-icons/web). Dipakai bersama font
+//! "phosphor" yang di-embed di `theme::setup_fonts`.
 
-/// ⚡ kilat — brand / aksi cepat
-pub const LIGHTNING: &str = "⚡";
-/// ⊞ grid 2x2 — dashboard
-pub const SQUARES_FOUR: &str = "⊞";
-/// ⊟ grid — tombol  
-pub const GRID_FOUR: &str = "⊟";
-/// ◉ lingkaran orang — profil
-pub const USER_CIRCLE: &str = "◉";
-/// ∷ QR code — pairing
-pub const QR_CODE: &str = "∷";
-/// ⊕ lingkaran plus — devices
-pub const DEVICES: &str = "⊕";
-/// ⧉ plug terhubung — integrasi
-pub const PLUGS_CONNECTED: &str = "⧉";
-/// ≡ daftar — activity
-pub const LIST_BULLETS: &str = "≡";
-/// ⚙ gear — settings
-pub const GEAR: &str = "⚙";
-/// ⬡ plug — device online
-pub const PLUG: &str = "◈";
-/// ▤ stack — page
-pub const STACK: &str = "▤";
+pub const ACTIVITY: &str = "\u{e000}";
+pub const ARROW_LEFT: &str = "\u{e058}";
+pub const ARROWS_LEFT_RIGHT: &str = "\u{e0a0}";
+pub const BROADCAST: &str = "\u{e0f2}";
+pub const CAMERA: &str = "\u{e10e}";
+pub const CHAT_CIRCLE: &str = "\u{e168}";
+pub const CHECK: &str = "\u{e182}";
+pub const CIRCLE_DASHED: &str = "\u{e602}";
+pub const CLOCK: &str = "\u{e19a}";
+pub const DESKTOP: &str = "\u{e560}";
+pub const DEVICES: &str = "\u{eba4}";
+pub const DOTS_THREE: &str = "\u{e1fe}";
+pub const ENVELOPE: &str = "\u{e214}";
+pub const FADERS: &str = "\u{e228}";
+pub const FOLDER_OPEN: &str = "\u{e256}";
+pub const GEAR: &str = "\u{e270}";
+pub const GLOBE: &str = "\u{e288}";
+pub const GRID_FOUR: &str = "\u{e296}";
+pub const HEART: &str = "\u{e2a8}";
+pub const HOUSE: &str = "\u{e2c2}";
+pub const KEYBOARD: &str = "\u{e2d8}";
+pub const LIGHTNING: &str = "\u{e2de}";
+pub const LINK_BREAK: &str = "\u{e2e4}";
+pub const LIST: &str = "\u{e2f0}";
+pub const LIST_BULLETS: &str = "\u{e2f0}";
+pub const MAGNIFYING_GLASS: &str = "\u{e30c}";
+pub const MICROPHONE: &str = "\u{e326}";
+pub const MICROPHONE_SLASH: &str = "\u{e328}";
+pub const MONITOR: &str = "\u{e32e}";
+pub const MUSIC_NOTES: &str = "\u{e340}";
+pub const PLAY: &str = "\u{e3d0}";
+pub const PLAY_PAUSE: &str = "\u{e8be}";
+pub const PLUGS: &str = "\u{eb56}";
+pub const PLUG: &str = "\u{eb56}";
+pub const PLUGS_CONNECTED: &str = "\u{eb56}";
+pub const PLUS: &str = "\u{e3d4}";
+pub const POWER: &str = "\u{e3da}";
+pub const PULSE: &str = "\u{e3ee}";
+pub const QR_CODE: &str = "\u{e3e6}";
+pub const RECORD: &str = "\u{e3ee}";
+pub const ROCKET: &str = "\u{e3fc}";
+pub const SHUFFLE: &str = "\u{e422}";
+pub const SIGN_OUT: &str = "\u{e42a}";
+pub const SLIDERS: &str = "\u{e432}";
+pub const SQUARES_FOUR: &str = "\u{e464}";
+pub const STACK: &str = "\u{e466}";
+pub const STAR: &str = "\u{e46a}";
+pub const STOP: &str = "\u{e46c}";
+pub const TERMINAL_WINDOW: &str = "\u{eae8}";
+pub const TIMER: &str = "\u{e492}";
+pub const TRAY: &str = "\u{e4aa}";
+pub const USER: &str = "\u{e4c2}";
+pub const USER_CIRCLE: &str = "\u{e4c4}";
+pub const VIDEO_CAMERA: &str = "\u{e4da}";
+pub const WARNING_CIRCLE: &str = "\u{e4e2}";
+pub const WIFI_HIGH: &str = "\u{e4ea}";
+pub const X: &str = "\u{e4f6}";
