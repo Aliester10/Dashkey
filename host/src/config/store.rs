@@ -54,6 +54,12 @@ pub enum Action {
     OpenApp {
         target: String,
     },
+    /// Tutup aplikasi yang sedang berjalan (graceful; force = paksa).
+    CloseApp {
+        target: String,
+        #[serde(default)]
+        force: bool,
+    },
     /// Jalankan keyboard shortcut, mis. `["ctrl","shift","s"]`.
     Hotkey {
         keys: Vec<String>,
@@ -97,6 +103,10 @@ pub struct Button {
     pub icon: Option<String>,
     pub color: String,
     pub actions: Vec<Action>,
+    /// Aksi sekunder — dieksekusi saat double tap di Controller.
+    /// Kosong = tombol tidak punya gesture double tap.
+    #[serde(default)]
+    pub secondary_actions: Vec<Action>,
 }
 
 /// Seluruh config DashKey.
@@ -553,6 +563,7 @@ impl Default for Config {
                 actions: vec![Action::OpenUrl {
                     target: "https://www.google.com".into(),
                 }],
+                secondary_actions: Vec::new(),
             },
         );
         buttons.insert(
@@ -565,6 +576,7 @@ impl Default for Config {
                 actions: vec![Action::Hotkey {
                     keys: vec!["ctrl".into(), "a".into()],
                 }],
+                secondary_actions: Vec::new(),
             },
         );
         let media_buttons = [
@@ -586,6 +598,7 @@ impl Default for Config {
                     actions: vec![Action::MediaControl {
                         control: control.into(),
                     }],
+                    secondary_actions: Vec::new(),
                 },
             );
         }
@@ -599,6 +612,7 @@ impl Default for Config {
                 actions: vec![Action::ObsToggleMute {
                     target: "Mic/Aux".into(),
                 }],
+                secondary_actions: Vec::new(),
             },
         );
         buttons.insert(
@@ -609,6 +623,7 @@ impl Default for Config {
                 icon: None,
                 color: "#7B1FA2".into(),
                 actions: vec![Action::ObsStartStream, Action::ObsStopStream],
+                secondary_actions: Vec::new(),
             },
         );
         buttons.insert(
@@ -619,6 +634,7 @@ impl Default for Config {
                 icon: None,
                 color: "#E65100".into(),
                 actions: vec![Action::ObsStartRecording, Action::ObsStopRecording],
+                secondary_actions: Vec::new(),
             },
         );
         let mut pages = HashMap::new();
@@ -661,6 +677,7 @@ mod tests {
                 },
                 Action::ObsStartStream,
             ],
+            secondary_actions: Vec::new(),
         };
         let json = serde_json::to_string_pretty(&btn).unwrap();
         assert!(json.contains(r#""action_type": "open_app""#));

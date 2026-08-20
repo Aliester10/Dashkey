@@ -80,6 +80,7 @@ impl ActionExecutor {
     pub fn execute(&self, action: &Action) -> ActionOutcome {
         match action {
             Action::OpenApp { target } => self.open_app(target),
+            Action::CloseApp { target, force } => self.close_app(target, *force),
             Action::OpenUrl { target } => self.open_url(target),
             Action::Shell { command } => self.run_shell(command),
             Action::Hotkey { keys } => self.hotkey(keys),
@@ -144,6 +145,43 @@ impl ActionExecutor {
                 .await
                 .unwrap_or_else(|e| ActionOutcome::err(format!("task gagal: {e}")))
             }
+        }
+    }
+
+    /// Tutup aplikasi yang sedang berjalan (graceful; force = paksa).
+    fn close_app(&self, target: &str, force: bool) -> ActionOutcome {
+        debug!(%target, force, "close_app");
+        let result = if cfg!(target_os = "windows") {
+            let name = normalize_process_name(target);
+            let mut cmd = Command::new("taskkill");
+            cmd.arg("/IM").arg(&name);
+            if force {
+                cmd.arg("/F");
+            }
+            cmd.spawn()
+        } else if cfg!(target_os = "macos") {
+            if force {
+                Command::new("pkill").args(["-9", "-f", target]).spawn()
+            } else {
+                Command::new("osascript")
+                    .args(["-e", &format!("tell application {:?} to quit", target)])
+                    .spawn()
+            }
+        } else {
+            // Linux: SIGTERM (graceful) / SIGKILL (force).
+            let mut cmd = Command::new("pkill");
+            if force {
+                cmd.arg("-9");
+            }
+            cmd.args(["-f", target]).spawn()
+        };
+        match result {
+            Ok(_) => ActionOutcome::ok_with(format!(
+                "close_app {} ({})",
+                target,
+                if force { "force" } else { "graceful" }
+            )),
+            Err(e) => ActionOutcome::err(format!("gagal menutup aplikasi: {e}")),
         }
     }
 
@@ -392,6 +430,16 @@ fn parse_mouse_button(button: &str) -> Option<Button> {
     }
 }
 
+/// Normalisasi nama proses untuk `taskkill /IM`: pastikan punya ekstensi `.exe`.
+fn normalize_process_name(target: &str) -> String {
+    let lower = target.to_ascii_lowercase();
+    if lower.ends_with(".exe") {
+        target.to_string()
+    } else {
+        format!("{target}.exe")
+    }
+}
+
 /// Map string kontrol media ke media key enigo.
 pub fn parse_media_control(control: &str) -> Option<Key> {
     let key = match control.to_ascii_lowercase().as_str() {
@@ -441,5 +489,12 @@ mod tests {
         assert_eq!(parse_mouse_button("RIGHT"), Some(Button::Right));
         assert_eq!(parse_mouse_button("middle"), Some(Button::Middle));
         assert_eq!(parse_mouse_button("x1"), None);
+    }
+
+    #[test]
+    fn normalize_process_name_windows() {
+        assert_eq!(normalize_process_name("discord"), "discord.exe");
+        assert_eq!(normalize_process_name("obs64.exe"), "obs64.exe");
+        assert_eq!(normalize_process_name("Code.EXE"), "Code.EXE");
     }
 }
