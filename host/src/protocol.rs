@@ -30,7 +30,12 @@ pub enum InboundMessage {
     },
 
     /// Fase 1 — command dari tombol (PRD 8.4).
-    ButtonPress { button_id: String, page_id: String },
+    /// `gesture` opsional: "tap" (default) | "double_tap" | "long_press".
+    ButtonPress {
+        button_id: String,
+        page_id: String,
+        gesture: Option<String>,
+    },
 
     /// Fase 2 — pindah page aktif.
     SwitchPage { page_id: String },
@@ -141,12 +146,27 @@ mod tests {
         let raw = r#"{"type":"button_press","payload":{"button_id":"btn_airhorn","page_id":"page_soundboard"}}"#;
         let msg: InboundMessage = serde_json::from_str(raw).unwrap();
         match msg {
-            InboundMessage::ButtonPress { button_id, page_id } => {
+            InboundMessage::ButtonPress {
+                button_id,
+                page_id,
+                gesture,
+            } => {
                 assert_eq!(button_id, "btn_airhorn");
                 assert_eq!(page_id, "page_soundboard");
+                assert_eq!(gesture, None);
             }
             _ => panic!("tipe salah"),
         }
+    }
+
+    #[test]
+    fn inbound_button_press_with_gesture() {
+        let raw = r#"{"type":"button_press","payload":{"button_id":"b1","page_id":"p1","gesture":"long_press"}}"#;
+        let msg: InboundMessage = serde_json::from_str(raw).unwrap();
+        assert!(matches!(
+            msg,
+            InboundMessage::ButtonPress { gesture: Some(ref g), .. } if g == "long_press"
+        ));
     }
 
     #[test]

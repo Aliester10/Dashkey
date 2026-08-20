@@ -249,14 +249,23 @@ impl Server {
                 }
                 replies
             }
-            InboundMessage::ButtonPress { button_id, page_id } => {
+            InboundMessage::ButtonPress {
+                button_id,
+                page_id,
+                gesture,
+            } => {
                 if !session.authenticated {
                     return vec![OutboundMessage::Error {
                         message: "autentikasi diperlukan sebelum eksekusi".into(),
                     }];
                 }
-                self.handle_button_press(client_id, &button_id, &page_id)
-                    .await
+                self.handle_button_press(
+                    client_id,
+                    &button_id,
+                    &page_id,
+                    gesture.as_deref().unwrap_or("tap"),
+                )
+                .await
             }
             InboundMessage::SwitchPage { page_id } => {
                 if !session.authenticated {
@@ -400,6 +409,7 @@ impl Server {
             actions: vec![crate::config::Action::PlaySound {
                 target: import.file_name.clone(),
             }],
+            secondary_actions: Vec::new(),
         };
 
         {
@@ -559,8 +569,9 @@ impl Server {
         client_id: u64,
         button_id: &str,
         page_id: &str,
+        gesture: &str,
     ) -> Vec<OutboundMessage> {
-        debug!(client_id, %button_id, %page_id, "button_press");
+        debug!(client_id, %button_id, %page_id, %gesture, "button_press");
 
         let button = {
             let config = self.state.config.lock().unwrap();
@@ -577,11 +588,13 @@ impl Server {
             }
         };
 
-        let mut replies = Vec::with_capacity(button.actions.len());
-        for action in &button.actions {
+        // Pilih daftar aksi berdasarkan gesture Controller.
+        let actions = self.actions_for_gesture(&button, gesture);
+        let mut replies = Vec::with_capacity(actions.len());
+        for action in &actions {
             let outcome = self.state.executor.execute_async(action.clone()).await;
             if let Some(msg) = &outcome.message {
-                info!(client_id, %button_id, message = %msg, "hasil aksi");
+                info!(client_id, %button_id, %gesture, message = %msg, "hasil aksi");
             }
 
             // Status dinamis tombol (PRD FR-15): toggle mute OBS mengubah warna.
@@ -615,6 +628,47 @@ impl Server {
         replies
     }
 
+    /// Pilih daftar aksi sesuai gesture Controller (tap/double_tap/long_press).
+    ///
+    /// - tap        → `actions` (chain utama)
+    /// - double_tap → `secondary_actions`; fallback ke `actions` bila kosong
+    /// - long_press → aksi `CloseApp` eksplisit; bila tidak ada, tutup aplikasi
+    ///   dari `OpenApp` pertama (long-press = close, default global)
+    fn actions_for_gesture(
+        &self,
+        button: &crate::config::Button,
+        gesture: &str,
+    ) -> Vec<crate::config::Action> {
+        match gesture {
+            "double_tap" => {
+                if button.secondary_actions.is_empty() {
+                    button.actions.clone()
+                } else {
+                    button.secondary_actions.clone()
+                }
+            }
+            "long_press" => {
+                let explicit: Vec<_> = button
+                    .actions
+                    .iter()
+                    .filter(|a| matches!(a, crate::config::Action::CloseApp { .. }))
+                    .cloned()
+                    .collect();
+                if !explicit.is_empty() {
+                    return explicit;
+                }
+                if let Some(crate::config::Action::OpenApp { target }) = button.actions.first() {
+                    return vec![crate::config::Action::CloseApp {
+                        target: target.clone(),
+                        force: false,
+                    }];
+                }
+                button.actions.clone()
+            }
+            _ => button.actions.clone(),
+        }
+    }
+
     /// Bangun pesan `config_sync` berisi seluruh config (PRD FR-18).
     fn config_sync_message(&self) -> OutboundMessage {
         let config: Config = self.state.config.lock().unwrap().snapshot();
@@ -631,7 +685,9 @@ impl Server {
                     continue;
                 };
                 if let Some(data) = crate::integration::sfx::load_image_base64(path) {
-                    button.as_object_mut().map(|o| o.insert("icon_data".into(), serde_json::Value::String(data)));
+                    button
+                        .as_object_mut()
+                        .map(|o| o.insert("icon_data".into(), serde_json::Value::String(data)));
                 }
             }
         }
