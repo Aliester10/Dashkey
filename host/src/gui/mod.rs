@@ -22,7 +22,7 @@ use eframe::egui::{self, Color32, RichText, ScrollArea};
 use tracing::{info, warn};
 
 use self::theme::Palette;
-use self::widgets::{hero_banner, icon_chip, stat_card_themed, tab_button};
+use self::widgets::{hero_banner, icon_chip, tab_button};
 
 use crate::config::{Action, Button, ConfigStore};
 use crate::network::Server;
@@ -544,11 +544,6 @@ impl eframe::App for DesktopGui {
 
 // stat_card lama dihapus — digantikan oleh widgets::stat_card_themed.
 
-/// Tombol kecil standar.
-fn small_button(ui: &mut egui::Ui, text: &str) -> egui::Response {
-    ui.button(RichText::new(text).size(12.0))
-}
-
 impl DesktopGui {
     // ------------------------------------------------------------------
     // Page: Dashboard
@@ -558,74 +553,61 @@ impl DesktopGui {
             .frame(
                 egui::Frame::new()
                     .fill(Palette::SURFACE_0)
-                    .inner_margin(egui::Margin::same(20)),
+                    .inner_margin(egui::Margin::same(28)),
             )
             .show(ctx, |ui| {
                 self.apply_compact(ui);
 
-                // ── Hero banner ─────────────────────────────────────────
-                hero_banner(
-                    ui,
-                    icons::LIGHTNING,
-                    "Selamat datang di DashKey",
-                    "Command center untuk mengelola tombol, device, dan integrasi PC.",
-                );
+                // ── Header ───────────────────────────────────────────────
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("Dashboard")
+                                .font(theme::font_bold(24.0))
+                                .color(Palette::TEXT_PRIMARY),
+                        );
+                        ui.add_space(2.0);
+                        ui.label(
+                            egui::RichText::new(
+                                "Pusat kendali DashKey — device, tombol, dan integrasi PC.",
+                            )
+                            .font(theme::font_regular(13.0))
+                            .color(Palette::TEXT_SECONDARY),
+                        );
+                    });
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let online = self.server.connection_count() > 0;
+                        let (color, label) = if online {
+                            (
+                                Palette::SUCCESS_TEXT,
+                                format!("● {} device online", self.server.connection_count()),
+                            )
+                        } else {
+                            (Palette::TEXT_MUTED, "● Belum ada device".to_string())
+                        };
+                        ui.label(
+                            egui::RichText::new(label)
+                                .font(theme::font_medium(12.5))
+                                .color(color),
+                        );
+                    });
+                });
 
-                ui.add_space(20.0);
+                ui.add_space(22.0);
 
-                // ── 4 stat cards ────────────────────────────────────────
+                // ── 4 stat cards ─────────────────────────────────────────
                 let mut nav: Option<Tab> = None;
                 ui.columns(4, |columns| {
-                    let cards: &[(&str, &str, &str, &str, egui::Color32, egui::Color32, Tab)] = &[
-                        (
-                            icons::PLUG,
-                            "DEVICE ONLINE",
-                            &self.server.connection_count().to_string(),
-                            "→ Devices",
-                            Palette::SUCCESS_BG,
-                            Palette::SUCCESS_TEXT,
-                            Tab::Devices,
-                        ),
-                        (
-                            icons::USER_CIRCLE,
-                            "PROFILE",
-                            &snapshot.profiles.len().to_string(),
-                            "→ Profiles",
-                            Palette::BLUE_BG,
-                            Palette::BLUE_TEXT,
-                            Tab::Profiles,
-                        ),
-                        (
-                            icons::STACK,
-                            "PAGE",
-                            &snapshot.pages.len().to_string(),
-                            "→ Buttons",
-                            Palette::PURPLE_BG,
-                            Palette::PURPLE_TEXT,
-                            Tab::Buttons,
-                        ),
-                        (
-                            icons::SQUARES_FOUR,
-                            "BUTTON",
-                            &snapshot.buttons.len().to_string(),
-                            "→ Buttons",
-                            Palette::AMBER_BG,
-                            Palette::AMBER_TEXT,
-                            Tab::Buttons,
-                        ),
-                    ];
-                    // Simpan value string agar tidak dangling reference
                     let device_val = self.server.connection_count().to_string();
                     let profile_val = snapshot.profiles.len().to_string();
                     let page_val = snapshot.pages.len().to_string();
                     let button_val = snapshot.buttons.len().to_string();
-                    let typed_cards = [
+                    let cards = [
                         (
-                            icons::PLUG,
-                            "DEVICE ONLINE",
+                            icons::PLUGS,
+                            "DEVICE",
                             device_val.as_str(),
                             "→ Devices",
-                            Palette::SUCCESS_BG,
                             Palette::SUCCESS_TEXT,
                             Tab::Devices,
                         ),
@@ -634,7 +616,6 @@ impl DesktopGui {
                             "PROFILE",
                             profile_val.as_str(),
                             "→ Profiles",
-                            Palette::BLUE_BG,
                             Palette::BLUE_TEXT,
                             Tab::Profiles,
                         ),
@@ -643,7 +624,6 @@ impl DesktopGui {
                             "PAGE",
                             page_val.as_str(),
                             "→ Buttons",
-                            Palette::PURPLE_BG,
                             Palette::PURPLE_TEXT,
                             Tab::Buttons,
                         ),
@@ -652,126 +632,199 @@ impl DesktopGui {
                             "BUTTON",
                             button_val.as_str(),
                             "→ Buttons",
-                            Palette::AMBER_BG,
-                            Palette::AMBER_TEXT,
+                            Palette::TEXT_SECONDARY,
                             Tab::Buttons,
                         ),
                     ];
-                    let _ = cards; // suppress unused
-                    for (col, (icon, label, value, caption, ibg, ifg, tab)) in
-                        columns.iter_mut().zip(typed_cards)
+                    for (col, (icon, label, value, caption, accent, tab)) in
+                        columns.iter_mut().zip(cards)
                     {
-                        if stat_card_themed(col, icon, label, value, caption, ibg, ifg) {
+                        if widgets::neo_stat_card(col, icon, label, value, caption, accent) {
                             nav = Some(tab);
                         }
                     }
                 });
-                if let Some(tab) = nav {
+                if let Some(tab) = nav.take() {
                     self.tab = tab;
                 }
 
-                ui.add_space(20.0);
+                ui.add_space(26.0);
 
                 // ── Quick start + Activity ───────────────────────────────
                 ui.columns(2, |columns| {
-                    // Quick start card
-                    widgets::card(&mut columns[0], Palette::SURFACE_1, |ui| {
-                        ui.label(
-                            RichText::new("Quick Start")
-                                .color(Palette::TEXT_PRIMARY)
-                                .size(15.0)
-                                .strong(),
-                        );
-                        ui.add_space(6.0);
-                        ui.label(
-                            RichText::new(
-                                "Mulai dari pairing HP, lalu tambahkan aplikasi sebagai shortcut.",
-                            )
-                            .color(Palette::TEXT_MUTED)
-                            .size(12.0),
-                        );
-                        ui.add_space(10.0);
-                        let btn_style = |ui: &mut egui::Ui, icon: &str, text: &str| -> bool {
+                    // Quick start (panel raised)
+                    let qs_w = columns[0].available_width();
+                    let btn_w = qs_w - 36.0;
+                    widgets::neo_panel_fixed(
+                        &mut columns[0],
+                        egui::vec2(qs_w, 240.0),
+                        theme::RADIUS_CARD,
+                        widgets::NeoKind::Raised,
+                        |ui| {
+                            ui.add_space(18.0);
                             ui.horizontal(|ui| {
-                                ui.label(RichText::new(icon).color(Palette::ACCENT).size(14.0));
-                                ui.button(RichText::new(text).size(13.0)).clicked()
-                            })
-                            .inner
-                        };
-                        if btn_style(ui, icons::QR_CODE, "Pair device baru") {
-                            // navigasi handled di luar closure — set flag
-                        }
-                        ui.add_space(4.0);
-                        if btn_style(ui, icons::GRID_FOUR, "Kelola tombol") {}
-                        ui.add_space(4.0);
-                        if btn_style(ui, icons::PLUGS_CONNECTED, "Integrasi OBS & soundboard") {}
-                    });
+                                ui.add_space(18.0);
+                                widgets::section_label(ui, "Quick Start");
+                            });
+                            ui.add_space(10.0);
+                            ui.horizontal(|ui| {
+                                ui.add_space(18.0);
+                                ui.label(
+                                    egui::RichText::new(
+                                        "Pairing HP, lalu tambahkan aplikasi sebagai shortcut.",
+                                    )
+                                    .font(theme::font_regular(12.5))
+                                    .color(Palette::TEXT_MUTED),
+                                );
+                            });
+                            ui.add_space(16.0);
+                            ui.horizontal(|ui| {
+                                ui.add_space(18.0);
+                                if widgets::neo_button(
+                                    ui,
+                                    egui::vec2(btn_w, 40.0),
+                                    theme::RADIUS_CHIP,
+                                    Some(icons::QR_CODE),
+                                    "Pair device baru",
+                                )
+                                .clicked()
+                                {
+                                    // navigasi via flag di luar closure
+                                }
+                            });
+                            ui.add_space(10.0);
+                            ui.horizontal(|ui| {
+                                ui.add_space(18.0);
+                                if widgets::neo_button(
+                                    ui,
+                                    egui::vec2(btn_w, 40.0),
+                                    theme::RADIUS_CHIP,
+                                    Some(icons::SQUARES_FOUR),
+                                    "Kelola tombol",
+                                )
+                                .clicked()
+                                {
+                                    nav = Some(Tab::Buttons);
+                                }
+                            });
+                            ui.add_space(10.0);
+                            ui.horizontal(|ui| {
+                                ui.add_space(18.0);
+                                if widgets::neo_button(
+                                    ui,
+                                    egui::vec2(btn_w, 40.0),
+                                    theme::RADIUS_CHIP,
+                                    Some(icons::PLUGS),
+                                    "Integrasi OBS & soundboard",
+                                )
+                                .clicked()
+                                {
+                                    nav = Some(Tab::Integrations);
+                                }
+                            });
+                        },
+                    );
 
-                    // Activity card
-                    widgets::card(&mut columns[1], Palette::SURFACE_1, |ui| {
-                        ui.label(
-                            RichText::new("Recent Activity")
-                                .color(Palette::TEXT_PRIMARY)
-                                .size(15.0)
-                                .strong(),
-                        );
-                        ui.add_space(8.0);
-                        if self.activity.is_empty() {
-                            ui.label(
-                                RichText::new("Belum ada aktivitas.")
-                                    .color(Palette::TEXT_MUTED)
-                                    .size(12.0),
-                            );
-                        } else {
-                            for item in self.activity.iter().rev().take(6) {
-                                ui.horizontal(|ui| {
-                                    ui.colored_label(Palette::ACCENT, "▸");
-                                    ui.label(
-                                        RichText::new(item)
-                                            .color(Palette::TEXT_SECONDARY)
-                                            .size(12.0),
-                                    );
-                                });
-                                ui.add_space(2.0);
-                            }
-                        }
-                    });
-                });
-
-                ui.add_space(20.0);
-
-                // ── Status bar bawah dashboard ───────────────────────────
-                widgets::card(ui, Palette::SURFACE_1, |ui| {
-                    ui.horizontal(|ui| {
-                        let online = self.server.connection_count() > 0;
-                        widgets::status_dot(
-                            ui,
-                            online,
-                            if online {
-                                "Host berjalan normal"
+                    // Activity feed (panel raised)
+                    let act_w = columns[1].available_width();
+                    widgets::neo_panel_fixed(
+                        &mut columns[1],
+                        egui::vec2(act_w, 240.0),
+                        theme::RADIUS_CARD,
+                        widgets::NeoKind::Raised,
+                        |ui| {
+                            ui.add_space(18.0);
+                            ui.horizontal(|ui| {
+                                ui.add_space(18.0);
+                                widgets::section_label(ui, "Recent Activity");
+                            });
+                            ui.add_space(10.0);
+                            if self.activity.is_empty() {
+                                ui.label(
+                                    egui::RichText::new("Belum ada aktivitas.")
+                                        .font(theme::font_regular(12.5))
+                                        .color(Palette::TEXT_MUTED),
+                                );
                             } else {
-                                "Menunggu koneksi device"
-                            },
-                        );
-                        ui.add_space(8.0);
-                        ui.label(
-                            RichText::new(format!(
-                                "{}:{}  ·  uptime {}",
-                                self.state.host_ip,
-                                self.port,
-                                format_duration(self.started_at.elapsed())
-                            ))
-                            .color(Palette::TEXT_MUTED)
-                            .size(12.0),
-                        );
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if small_button(ui, "⟳ Broadcast config").clicked() {
-                                self.server.broadcast_config_sync();
-                                self.log_event("Config di-broadcast ke semua device");
+                                for item in self.activity.iter().rev().take(5) {
+                                    ui.horizontal(|ui| {
+                                        ui.add_space(18.0);
+                                        ui.label(
+                                            egui::RichText::new("•")
+                                                .font(theme::font_bold(14.0))
+                                                .color(Palette::ACCENT),
+                                        );
+                                        ui.add_space(6.0);
+                                        ui.label(
+                                            egui::RichText::new(item)
+                                                .font(theme::font_regular(12.5))
+                                                .color(Palette::TEXT_SECONDARY),
+                                        );
+                                    });
+                                    ui.add_space(4.0);
+                                }
                             }
-                        });
-                    });
+                        },
+                    );
                 });
+                if let Some(tab) = nav.take() {
+                    self.tab = tab;
+                }
+
+                ui.add_space(26.0);
+
+                // ── Status bar ───────────────────────────────────────────
+                widgets::neo_panel_fixed(
+                    ui,
+                    egui::vec2(ui.available_width(), 64.0),
+                    theme::RADIUS_CARD,
+                    widgets::NeoKind::Inset,
+                    |ui| {
+                        ui.horizontal(|ui| {
+                            ui.add_space(20.0);
+                            let online = self.server.connection_count() > 0;
+                            let (color, label) = if online {
+                                (Palette::SUCCESS_TEXT, "Host berjalan normal")
+                            } else {
+                                (Palette::TEXT_MUTED, "Menunggu koneksi device")
+                            };
+                            ui.label(
+                                egui::RichText::new(label)
+                                    .font(theme::font_medium(13.0))
+                                    .color(color),
+                            );
+                            ui.add_space(16.0);
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "{}:{}  ·  uptime {}",
+                                    self.state.host_ip,
+                                    self.port,
+                                    format_duration(self.started_at.elapsed())
+                                ))
+                                .font(theme::font_regular(12.5))
+                                .color(Palette::TEXT_MUTED),
+                            );
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    ui.add_space(16.0);
+                                    if widgets::neo_button(
+                                        ui,
+                                        egui::vec2(150.0, 36.0),
+                                        theme::RADIUS_CHIP,
+                                        Some(icons::BROADCAST),
+                                        "Broadcast config",
+                                    )
+                                    .clicked()
+                                    {
+                                        self.server.broadcast_config_sync();
+                                        self.log_event("Config di-broadcast ke semua device");
+                                    }
+                                },
+                            );
+                        });
+                    },
+                );
             });
     }
 
