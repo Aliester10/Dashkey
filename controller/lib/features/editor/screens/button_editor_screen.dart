@@ -133,42 +133,134 @@ class ButtonEditorScreen extends ConsumerWidget {
               itemBuilder: (context, i) {
                 final action =
                     (button['actions'] as List)[i] as Map<String, dynamic>;
-                final type = action['action_type'] as String;
-                final detail = actionLabel(type, action);
-                return Card(
-                  key: ValueKey('$i-$type'),
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(actionIcon(type)),
-                    title: Text(type),
-                    subtitle: detail == null ? null : Text(detail),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () {
-                        final actions = [...(button['actions'] as List)];
-                        actions.removeAt(i);
-                        update({'actions': actions});
-                      },
-                    ),
-                    onTap: () async {
-                      final edited = await showModalBottomSheet<
-                          Map<String, dynamic>>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) =>
-                            ActionEditorSheet(initial: action),
-                      );
-                      if (edited != null) {
-                        final actions = [...(button['actions'] as List)];
-                        actions[i] = edited;
-                        update({'actions': actions});
-                      }
-                    },
-                  ),
+                return _ActionTile(
+                  action: action,
+                  onDelete: () {
+                    final actions = [...(button['actions'] as List)];
+                    actions.removeAt(i);
+                    update({'actions': actions});
+                  },
+                  onEdit: () async {
+                    final edited = await showModalBottomSheet<
+                        Map<String, dynamic>>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => ActionEditorSheet(initial: action),
+                    );
+                    if (edited != null) {
+                      final actions = [...(button['actions'] as List)];
+                      actions[i] = edited;
+                      update({'actions': actions});
+                    }
+                  },
+                );
+              },
+            ),
+          const SizedBox(height: 28),
+          const Divider(),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text('Aksi Sekunder (Double Tap)',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const Spacer(),
+              TextButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Tambah'),
+                onPressed: () async {
+                  final action = await showModalBottomSheet<Map<String, dynamic>>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => const ActionEditorSheet(),
+                  );
+                  if (action != null) {
+                    final secondary =
+                        [...(button['secondary_actions'] as List? ?? [])];
+                    secondary.add(action);
+                    update({'secondary_actions': secondary});
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tap dua kali pada tombol untuk menjalankan aksi ini '
+            '(contoh: Ctrl+T untuk tab baru).',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          if ((button['secondary_actions'] as List? ?? []).isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'Belum ada aksi sekunder. Tap ganda akan sama dengan tap biasa.',
+              ),
+            )
+          else
+            ...List.generate(
+              (button['secondary_actions'] as List).length,
+              (i) {
+                final action = (button['secondary_actions'] as List)[i]
+                    as Map<String, dynamic>;
+                return _ActionTile(
+                  action: action,
+                  onDelete: () {
+                    final secondary =
+                        [...(button['secondary_actions'] as List)];
+                    secondary.removeAt(i);
+                    update({'secondary_actions': secondary});
+                  },
+                  onEdit: () async {
+                    final edited = await showModalBottomSheet<
+                        Map<String, dynamic>>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => ActionEditorSheet(initial: action),
+                    );
+                    if (edited != null) {
+                      final secondary =
+                          [...(button['secondary_actions'] as List)];
+                      secondary[i] = edited;
+                      update({'secondary_actions': secondary});
+                    }
+                  },
                 );
               },
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tile satu aksi di editor (label + ikon + hapus + edit).
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.action,
+    required this.onDelete,
+    required this.onEdit,
+  });
+
+  final Map<String, dynamic> action;
+  final VoidCallback onDelete;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = action['action_type'] as String;
+    final detail = actionLabel(type, action);
+    return Card(
+      child: ListTile(
+        dense: true,
+        leading: Icon(actionIcon(type)),
+        title: Text(type),
+        subtitle: detail == null ? null : Text(detail),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline),
+          onPressed: onDelete,
+        ),
+        onTap: onEdit,
       ),
     );
   }

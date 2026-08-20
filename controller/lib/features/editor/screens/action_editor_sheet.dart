@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 /// Definisi tipe aksi yang didukung editor.
 const actionTypeDefs = <String, ActionTypeDef>{
   'open_app': ActionTypeDef('Buka Aplikasi', 'target', 'Path/executable'),
+  'close_app': ActionTypeDef('Tutup Aplikasi', 'target', 'nama proses, contoh: discord'),
   'open_url': ActionTypeDef('Buka URL', 'target', 'https://...'),
   'shell': ActionTypeDef('Jalankan Command', 'command', 'echo halo'),
   'hotkey': ActionTypeDef('Keyboard Shortcut', 'keys', 'ctrl,shift,s'),
@@ -46,6 +47,7 @@ String? actionLabel(String type, Map<String, dynamic> action) {
 /// Ikon per tipe aksi.
 IconData actionIcon(String type) => switch (type) {
       'open_app' => Icons.apps,
+      'close_app' => Icons.close,
       'open_url' => Icons.public,
       'shell' => Icons.terminal,
       'hotkey' => Icons.keyboard,
@@ -69,6 +71,7 @@ class _ActionEditorSheetState extends State<ActionEditorSheet> {
   late String _type;
   final _textController = TextEditingController();
   String _mediaControl = mediaControls.first;
+  bool _force = false;
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _ActionEditorSheetState extends State<ActionEditorSheet> {
       if (value is List) _textController.text = value.join(',');
       if (def.field == 'control') _mediaControl = value as String? ?? mediaControls.first;
     }
+    _force = widget.initial?['force'] as bool? ?? false;
   }
 
   @override
@@ -105,6 +109,9 @@ class _ActionEditorSheetState extends State<ActionEditorSheet> {
         action['control'] = _mediaControl;
       default:
         break;
+    }
+    if (_type == 'close_app' && _force) {
+      action['force'] = true;
     }
     return action;
   }
@@ -157,6 +164,18 @@ class _ActionEditorSheetState extends State<ActionEditorSheet> {
                 border: const OutlineInputBorder(),
               ),
             ),
+          if (_type == 'close_app') ...[
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Force close'),
+              subtitle: const Text(
+                'Paksa tutup (data yang belum disimpan bisa hilang)',
+              ),
+              value: _force,
+              onChanged: (v) => setState(() => _force = v),
+            ),
+          ],
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_buildAction()),
