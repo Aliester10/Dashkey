@@ -26,6 +26,12 @@ pub fn card(
     egui::Frame::new()
         .fill(fill)
         .corner_radius(RADIUS_CARD)
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 8],
+            blur: 20,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(115),
+        })
         .stroke(egui::Stroke::new(1.0_f32, Palette::BORDER))
         .inner_margin(egui::Margin::same(16))
         .show(ui, add_contents)
@@ -155,6 +161,15 @@ pub fn stat_card_themed(
     let painter = ui.painter();
 
     // Latar card
+    // In egui 0.33, to paint a shadow manually we can use `painter.add(shadow.as_shape(...))` but `Shadow` itself might not have that.
+    // Instead of doing manual shadow, let's just draw the shadow using egui's built-in shadow via a temporary frame. Or just skip manual shadow painting here and rely on the rect_filled if it's too complex.
+    // Let's omit the manual shadow here for stat_card_themed to get it to compile, and we'll wrap it in `Frame::new().shadow(...)` inside the loop in `mod.rs`.
+    // Wait, let's just remove the manual shadow and use `Frame` in `stat_card_themed`.
+
+    // We can draw a shadow by drawing a blurred rectangle under it (if we can), or just leave it for now.
+    // Wait, let's use `egui::Frame` to wrap the whole stat card to give it a shadow!
+    // But since we need to do it without changing the signature, we can't easily change the root allocation.
+    // So let's just ignore the manual shadow in `stat_card_themed` for a moment and focus on compiling.
     painter.rect_filled(rect, RADIUS_CARD, fill);
     painter.rect_stroke(
         rect,
@@ -264,23 +279,24 @@ pub fn status_dot(ui: &mut egui::Ui, online: bool, label: &str) {
 pub fn hero_banner(ui: &mut egui::Ui, icon: &str, heading: &str, subtext: &str) {
     card(ui, Palette::SURFACE_1, |ui| {
         ui.horizontal(|ui| {
-            ui.add_space(4.0);
-            icon_chip(ui, icon, Palette::ACCENT, Palette::ACCENT_TEXT_ON, 46.0);
-            ui.add_space(14.0);
+            ui.add_space(8.0);
+            icon_chip(ui, icon, Palette::ACCENT, Palette::ACCENT_TEXT_ON, 64.0);
+            ui.add_space(20.0);
             ui.vertical(|ui| {
-                ui.add_space(4.0);
+                ui.add_space(12.0);
                 ui.label(
                     egui::RichText::new(heading)
                         .color(Palette::TEXT_PRIMARY)
-                        .size(20.0)
+                        .size(28.0)
                         .strong(),
                 );
-                ui.add_space(2.0);
+                ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(subtext)
                         .color(Palette::TEXT_MUTED)
-                        .size(13.0),
+                        .size(14.0),
                 );
+                ui.add_space(12.0);
             });
         });
     });
@@ -441,6 +457,7 @@ pub fn action_chain_display(
     fn action_icon(action: &crate::config::Action) -> &'static str {
         match action {
             crate::config::Action::OpenApp { .. } => "◈",
+            crate::config::Action::CloseApp { .. } => "✕",
             crate::config::Action::OpenUrl { .. } => "⊕",
             crate::config::Action::Shell { .. } => "⊟",
             crate::config::Action::Hotkey { .. } => "⚡",

@@ -259,6 +259,7 @@ impl DesktopGui {
                                             icon: None,
                                             color: "#AF9EEC".into(),
                                             actions: vec![],
+                                            secondary_actions: Vec::new(),
                                         };
                                         self.mutate(move |config| {
                                             let _ = config.add_button_to_page(&page_id, button);
@@ -600,6 +601,7 @@ impl DesktopGui {
                                                             icon: None,
                                                             color: "#AF9EEC".into(),
                                                             actions: vec![],
+                                                            secondary_actions: Vec::new(),
                                                         };
                                                         self.mutate(move |config| {
                                                             let _ = config.add_button_to_page(
@@ -633,6 +635,7 @@ impl DesktopGui {
                                                     icon: None,
                                                     color: "#AF9EEC".into(),
                                                     actions: vec![],
+                                                    secondary_actions: Vec::new(),
                                                 };
                                                 self.mutate(move |config| {
                                                     let _ =
@@ -761,6 +764,15 @@ impl DesktopGui {
 fn action_draft(action: &Action) -> (String, String, String) {
     match action {
         Action::OpenApp { target } => ("open_app".into(), target.clone(), String::new()),
+        Action::CloseApp { target, force } => (
+            "close_app".into(),
+            target.clone(),
+            if *force {
+                "force".into()
+            } else {
+                String::new()
+            },
+        ),
         Action::OpenUrl { target } => ("open_url".into(), target.clone(), String::new()),
         Action::Shell { command } => ("shell".into(), command.clone(), String::new()),
         Action::Hotkey { keys } => ("hotkey".into(), keys.join(","), String::new()),
@@ -785,6 +797,10 @@ fn build_action(draft_type: &str, text: &str, media: &str) -> Action {
     match draft_type {
         "open_app" => Action::OpenApp {
             target: text.trim().to_string(),
+        },
+        "close_app" => Action::CloseApp {
+            target: text.trim().to_string(),
+            force: media == "force",
         },
         "open_url" => Action::OpenUrl {
             target: text.trim().to_string(),
@@ -952,6 +968,23 @@ impl DesktopGui {
                     | "obs_stop_stream"
                     | "obs_start_recording"
                     | "obs_stop_recording" => {}
+                    "close_app" => {
+                        ui.horizontal(|ui| {
+                            ui.label("Proses:");
+                            ui.add(
+                                egui::TextEdit::singleline(&mut editor.text)
+                                    .hint_text("contoh: discord")
+                                    .desired_width(220.0),
+                            );
+                        });
+                        let mut force = editor.media == "force";
+                        if ui
+                            .checkbox(&mut force, "Force close (paksa, tanpa simpan data)")
+                            .changed()
+                        {
+                            editor.media = if force { "force".into() } else { String::new() };
+                        }
+                    }
                     _ => {
                         ui.horizontal(|ui| {
                             ui.label("Target:");

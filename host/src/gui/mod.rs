@@ -301,6 +301,7 @@ impl DesktopGui {
             actions: vec![Action::OpenApp {
                 target: app.target.clone(),
             }],
+            secondary_actions: Vec::new(),
         };
         let page_id = self.selected_page.clone();
         self.mutate(move |config| {
@@ -570,7 +571,7 @@ impl DesktopGui {
                     "Command center untuk mengelola tombol, device, dan integrasi PC.",
                 );
 
-                ui.add_space(16.0);
+                ui.add_space(20.0);
 
                 // ── 4 stat cards ────────────────────────────────────────
                 let mut nav: Option<Tab> = None;
@@ -737,7 +738,7 @@ impl DesktopGui {
                     });
                 });
 
-                ui.add_space(16.0);
+                ui.add_space(20.0);
 
                 // ── Status bar bawah dashboard ───────────────────────────
                 widgets::card(ui, Palette::SURFACE_1, |ui| {
@@ -976,6 +977,10 @@ pub fn format_duration(d: std::time::Duration) -> String {
 pub fn describe_action(action: &Action) -> String {
     match action {
         Action::OpenApp { target } => format!("Buka aplikasi: {target}"),
+        Action::CloseApp { target, force } => format!(
+            "Tutup aplikasi: {target}{}",
+            if *force { " (paksa)" } else { "" }
+        ),
         Action::OpenUrl { target } => format!("Buka URL: {target}"),
         Action::Shell { command } => format!("Command: {command}"),
         Action::Hotkey { keys } => format!("Hotkey: {}", keys.join("+")),
@@ -993,6 +998,11 @@ pub fn describe_action(action: &Action) -> String {
 /// Daftar tipe aksi yang didukung editor.
 pub const ACTION_TYPES: &[(&str, &str, &str)] = &[
     ("open_app", "Buka aplikasi", "path/executable"),
+    (
+        "close_app",
+        "Tutup aplikasi",
+        "nama proses (contoh: discord)",
+    ),
     ("open_url", "Buka URL", "https://..."),
     ("shell", "Jalankan command", "contoh: code"),
     ("hotkey", "Keyboard shortcut", "ctrl,shift,s"),
