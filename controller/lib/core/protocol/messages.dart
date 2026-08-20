@@ -27,6 +27,16 @@ class ProtocolMessage {
   String toString() => encode();
 }
 
+/// Gesture tombol di Controller — menentukan aksi mana yang dieksekusi Host.
+enum ButtonGesture {
+  tap('tap'),
+  doubleTap('double_tap'),
+  longPress('long_press');
+
+  const ButtonGesture(this.value);
+  final String value;
+}
+
 /// Tipe pesan keluar (Controller → Host).
 class Outbound {
   Outbound._();
@@ -60,10 +70,15 @@ class Outbound {
   static ProtocolMessage buttonPress({
     required String buttonId,
     required String pageId,
+    String? gesture,
   }) =>
       ProtocolMessage(
         type: 'button_press',
-        payload: {'button_id': buttonId, 'page_id': pageId},
+        payload: {
+          'button_id': buttonId,
+          'page_id': pageId,
+          if (gesture != null) 'gesture': gesture,
+        },
       );
 
   static ProtocolMessage switchPage(String pageId) => ProtocolMessage(

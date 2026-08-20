@@ -214,9 +214,13 @@ class ConnectionController extends Notifier<ConnectionState> {
   }
 
   /// Kirim button_press (FR-16).
-  void pressButton(String buttonId, String pageId) {
+  void pressButton(String buttonId, String pageId, [ButtonGesture? gesture]) {
     if (state.phase != ConnectionPhase.authenticated) return;
-    _ws.send(Outbound.buttonPress(buttonId: buttonId, pageId: pageId));
+    _ws.send(Outbound.buttonPress(
+      buttonId: buttonId,
+      pageId: pageId,
+      gesture: gesture?.value,
+    ));
   }
 
   /// Pindah page aktif (FR-10).

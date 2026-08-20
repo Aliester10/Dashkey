@@ -90,6 +90,7 @@ class ActionDef {
     this.keys,
     this.command,
     this.control,
+    this.force = false,
   });
 
   final String actionType;
@@ -98,12 +99,16 @@ class ActionDef {
   final String? command;
   final String? control;
 
+  /// Hanya untuk `close_app`: tutup paksa (force) vs graceful.
+  final bool force;
+
   factory ActionDef.fromJson(Map<String, dynamic> json) => ActionDef(
         actionType: json['action_type'] as String? ?? '',
         target: json['target'] as String?,
         keys: (json['keys'] as List?)?.cast<String>(),
         command: json['command'] as String?,
         control: json['control'] as String?,
+        force: json['force'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -112,6 +117,7 @@ class ActionDef {
         if (keys != null) 'keys': keys,
         if (command != null) 'command': command,
         if (control != null) 'control': control,
+        if (force) 'force': force,
       };
 
   /// Label pendek untuk ditampilkan di editor.
@@ -130,6 +136,7 @@ class ButtonDef {
     this.icon,
     this.actions = const [],
     this.iconData,
+    this.secondaryActions = const [],
   });
 
   final String buttonId;
@@ -138,9 +145,15 @@ class ButtonDef {
   final String? icon;
   final List<ActionDef> actions;
 
+  /// Aksi sekunder — dieksekusi saat double tap (dari Host).
+  final List<ActionDef> secondaryActions;
+
   /// Gambar ikon (base64) di-embed oleh Host saat config_sync — agar HP
   /// menampilkan ikon identik dengan GUI desktop (icon gambar lokal PC).
   final String? iconData;
+
+  /// Apakah tombol punya gesture double tap (delay kecil pada single tap).
+  bool get hasSecondaryActions => secondaryActions.isNotEmpty;
 
   factory ButtonDef.fromJson(Map<String, dynamic> json) => ButtonDef(
         buttonId: json['button_id'] as String? ?? '',
@@ -148,6 +161,10 @@ class ButtonDef {
         color: json['color'] as String? ?? '#1E88E5',
         icon: json['icon'] as String?,
         actions: (json['actions'] as List?)
+                ?.map((a) => ActionDef.fromJson(a as Map<String, dynamic>))
+                .toList() ??
+            [],
+        secondaryActions: (json['secondary_actions'] as List?)
                 ?.map((a) => ActionDef.fromJson(a as Map<String, dynamic>))
                 .toList() ??
             [],
@@ -161,6 +178,8 @@ class ButtonDef {
         if (icon != null) 'icon': icon,
         if (iconData != null) 'icon_data': iconData,
         'actions': actions.map((a) => a.toJson()).toList(),
+        if (secondaryActions.isNotEmpty)
+          'secondary_actions': secondaryActions.map((a) => a.toJson()).toList(),
       };
 
   /// Parse warna hex (#RRGGBB) → Color; fallback biru.
