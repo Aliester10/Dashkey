@@ -134,9 +134,8 @@ pub fn tab_button(ui: &mut egui::Ui, icon: &str, label: &str, active: bool) -> b
 // Stat card (Dashboard)
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 /// Stat card bergaya baru: icon chip berwarna + label + nilai besar.
-///
-/// Kembalikan `true` jika diklik (untuk navigasi tab).
 pub fn stat_card_themed(
     ui: &mut egui::Ui,
     icon: &str,
@@ -902,4 +901,268 @@ pub fn action_sub_item(ui: &mut egui::Ui, label: &str) -> egui::Response {
     );
 
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+// ===========================================================================
+// Neumorphism (Dashboard) — komponen digambar manual dengan Painter
+// ===========================================================================
+
+/// Jenis elevasi neumorphic.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum NeoKind {
+    Raised,
+    Hover,
+    Inset,
+    #[allow(dead_code)]
+    Flat,
+}
+
+fn neo_shadow_layers(painter: &egui::Painter, rect: egui::Rect, radius: f32, dark: bool) {
+    let cr = egui::CornerRadius::same(radius as u8);
+    let base = if dark {
+        super::theme::Palette::SHADOW_DARK
+    } else {
+        super::theme::Palette::HIGHLIGHT
+    };
+    let sign = if dark { 1.0_f32 } else { -1.0_f32 };
+    for (dist, a) in [(4.0, 0.35_f32), (7.0, 0.22), (10.0, 0.12)] {
+        painter.rect_filled(
+            rect.translate(egui::vec2(sign * dist, sign * dist)),
+            cr,
+            base.gamma_multiply(a),
+        );
+    }
+}
+
+/// Gambar background neumorphic (raised/inset/hover) + border + bevel.
+pub fn paint_neo(painter: &egui::Painter, rect: egui::Rect, radius: f32, kind: NeoKind) {
+    let cr = egui::CornerRadius::same(radius as u8);
+    match kind {
+        NeoKind::Raised | NeoKind::Hover => {
+            neo_shadow_layers(painter, rect, radius, true);
+            neo_shadow_layers(painter, rect, radius, false);
+        }
+        NeoKind::Inset => {
+            // Bayangan terbalik: gelap kiri-atas, terang kanan-bawah.
+            neo_shadow_layers(painter, rect, radius, false);
+            neo_shadow_layers(painter, rect, radius, true);
+        }
+        NeoKind::Flat => {}
+    }
+
+    let fill = match kind {
+        NeoKind::Raised => super::theme::Palette::SURFACE_1,
+        NeoKind::Hover => super::theme::Palette::SURFACE_2,
+        NeoKind::Inset => super::theme::Palette::SURFACE_0,
+        NeoKind::Flat => super::theme::Palette::SURFACE_0,
+    };
+    painter.rect_filled(rect, cr, fill);
+
+    // Border.
+    painter.rect_stroke(
+        rect,
+        cr,
+        egui::Stroke::new(1.0_f32, super::theme::Palette::BORDER),
+        egui::StrokeKind::Inside,
+    );
+
+    // Bevel: garis highlight tipis di tepi atas & kiri (raised),
+    // atau di tepi bawah & kanan (inset).
+    let hl = super::theme::Palette::HIGHLIGHT.gamma_multiply(0.9);
+    let edge_w = 1.0_f32;
+    match kind {
+        NeoKind::Raised | NeoKind::Hover => {
+            painter.line_segment(
+                [
+                    rect.left_top() + egui::vec2(radius, 0.0),
+                    rect.right_top() - egui::vec2(radius, 0.0),
+                ],
+                egui::Stroke::new(edge_w, hl),
+            );
+            painter.line_segment(
+                [
+                    rect.left_top() + egui::vec2(0.0, radius),
+                    rect.left_bottom() - egui::vec2(0.0, radius),
+                ],
+                egui::Stroke::new(edge_w, hl),
+            );
+        }
+        NeoKind::Inset => {
+            let dk = super::theme::Palette::SHADOW_DARK.gamma_multiply(1.2);
+            painter.line_segment(
+                [
+                    rect.left_top() + egui::vec2(radius, 0.0),
+                    rect.right_top() - egui::vec2(radius, 0.0),
+                ],
+                egui::Stroke::new(edge_w, dk),
+            );
+            painter.line_segment(
+                [
+                    rect.left_top() + egui::vec2(0.0, radius),
+                    rect.left_bottom() - egui::vec2(0.0, radius),
+                ],
+                egui::Stroke::new(edge_w, dk),
+            );
+            painter.line_segment(
+                [
+                    rect.right_bottom() - egui::vec2(radius, 0.0),
+                    rect.left_bottom() + egui::vec2(radius, 0.0),
+                ],
+                egui::Stroke::new(edge_w, hl),
+            );
+        }
+        NeoKind::Flat => {}
+    }
+}
+
+/// Panel neumorphic dengan ukuran tetap (isi dirender di atasnya).
+#[allow(deprecated)]
+pub fn neo_panel_fixed(
+    ui: &mut egui::Ui,
+    size: egui::Vec2,
+    radius: f32,
+    kind: NeoKind,
+    add_contents: impl FnOnce(&mut egui::Ui),
+) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::hover());
+    paint_neo(ui.painter(), rect, radius, kind);
+    ui.allocate_ui_at_rect(rect, add_contents);
+    resp
+}
+
+/// Chip ikon neumorphic (inset) — menampilkan glyph Phosphor.
+pub fn neo_icon_chip(
+    ui: &mut egui::Ui,
+    icon: &str,
+    size: f32,
+    accent: egui::Color32,
+) -> egui::Rect {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
+    let cr = egui::CornerRadius::same((size * 0.30) as u8);
+    let painter = ui.painter();
+    // background inset + icon
+    painter.rect_filled(rect, cr, super::theme::Palette::SURFACE_0);
+    painter.rect_stroke(
+        rect,
+        cr,
+        egui::Stroke::new(1.0_f32, super::theme::Palette::BORDER),
+        egui::StrokeKind::Inside,
+    );
+    painter.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        icon,
+        super::theme::font_icon(size * 0.5),
+        accent,
+    );
+    rect
+}
+
+/// Stat card neumorphic (Dashboard). Kembalikan `true` jika diklik.
+#[allow(deprecated)]
+pub fn neo_stat_card(
+    ui: &mut egui::Ui,
+    icon: &str,
+    label: &str,
+    value: &str,
+    caption: &str,
+    accent: egui::Color32,
+) -> bool {
+    let width = ui.available_width();
+    let height = 118.0;
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::click());
+
+    let kind = if resp.is_pointer_button_down_on() {
+        NeoKind::Inset
+    } else if resp.hovered() {
+        NeoKind::Hover
+    } else {
+        NeoKind::Raised
+    };
+    paint_neo(ui.painter(), rect, super::theme::RADIUS_CARD, kind);
+
+    let mut child = ui.child_ui(rect, egui::Layout::top_down(egui::Align::Min), None);
+    child.set_min_size(egui::vec2(width, height));
+    child.add_space(12.0);
+    child.horizontal(|ui| {
+        ui.add_space(12.0);
+        neo_icon_chip(ui, icon, 34.0, accent);
+        ui.add_space(10.0);
+        ui.vertical(|ui| {
+            ui.label(
+                egui::RichText::new(label)
+                    .font(super::theme::font_medium(11.0))
+                    .color(super::theme::Palette::TEXT_MUTED),
+            );
+            ui.add_space(2.0);
+            ui.label(
+                egui::RichText::new(value)
+                    .font(super::theme::font_bold(26.0))
+                    .color(super::theme::Palette::TEXT_PRIMARY),
+            );
+        });
+    });
+    child.add_space(8.0);
+    child.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        ui.add_space(12.0);
+        ui.label(
+            egui::RichText::new(caption)
+                .font(super::theme::font_regular(11.0))
+                .color(super::theme::Palette::TEXT_MUTED),
+        );
+    });
+
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+        .clicked()
+}
+
+/// Tombol neumorphic interaktif (raised → hover → inset saat ditekan).
+pub fn neo_button(
+    ui: &mut egui::Ui,
+    size: egui::Vec2,
+    radius: f32,
+    icon: Option<&str>,
+    label: &str,
+) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
+    let kind = if resp.is_pointer_button_down_on() {
+        NeoKind::Inset
+    } else if resp.hovered() {
+        NeoKind::Hover
+    } else {
+        NeoKind::Raised
+    };
+    paint_neo(ui.painter(), rect, radius, kind);
+
+    let painter = ui.painter();
+    let center = rect.center();
+    let mut start_x = center.x - (size.x / 2.0) + 14.0;
+    if let Some(icon) = icon {
+        painter.text(
+            egui::pos2(start_x, center.y),
+            egui::Align2::LEFT_CENTER,
+            icon,
+            super::theme::font_icon(16.0),
+            super::theme::Palette::TEXT_SECONDARY,
+        );
+        start_x += 22.0;
+    }
+    painter.text(
+        egui::pos2(start_x, center.y),
+        egui::Align2::LEFT_CENTER,
+        label,
+        super::theme::font_medium(13.5),
+        super::theme::Palette::TEXT_PRIMARY,
+    );
+
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// Label section (uppercase, muted).
+pub fn section_label(ui: &mut egui::Ui, text: &str) {
+    ui.label(
+        egui::RichText::new(text.to_uppercase())
+            .font(super::theme::font_medium(11.0))
+            .color(super::theme::Palette::TEXT_MUTED),
+    );
 }
