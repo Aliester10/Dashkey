@@ -6,7 +6,9 @@ import 'package:flutter/physics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/feedback/dashkey_haptic.dart';
+import '../../../core/feedback/feedback_engine.dart';
 import '../../../core/model/config.dart';
+import '../../../core/protocol/messages.dart';
 import '../../clock/presentation/pages/clock_page.dart';
 import '../../connection/controllers/connection_controller.dart';
 import '../../editor/screens/editor_home_screen.dart';
@@ -290,6 +292,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       );
     }
 
+    final fb = ref.watch(feedbackEngineProvider);
+
     return ActionCard(
       actionName: button.label,
       icon: iconWidget,
@@ -297,9 +301,22 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       active: active,
       // PRD §5: toggle/obs → selection/medium, sisanya light.
       haptic: hapticForAction(button.actions.firstOrNull?.actionType),
+      longPressDuration: Duration(milliseconds: fb.longPressMs),
       onTap: () => ref
           .read(connectionControllerProvider.notifier)
           .pressButton(button.buttonId, pageId),
+      // Double tap → aksi sekunder (hanya jika tombol punya).
+      onDoubleTap: button.hasSecondaryActions
+          ? () => ref
+              .read(connectionControllerProvider.notifier)
+              .pressButton(button.buttonId, pageId, ButtonGesture.doubleTap)
+          : null,
+      // Long press → close app (default global di Host; bisa dimatikan).
+      onLongPress: fb.longPressClose
+          ? () => ref
+              .read(connectionControllerProvider.notifier)
+              .pressButton(button.buttonId, pageId, ButtonGesture.longPress)
+          : null,
     );
   }
 }

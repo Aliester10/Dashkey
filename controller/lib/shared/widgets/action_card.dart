@@ -12,6 +12,15 @@ class ActionCard extends StatelessWidget {
   final Color? accentColor;
   final VoidCallback? onTap;
 
+  /// Aksi sekunder (double tap).
+  final VoidCallback? onDoubleTap;
+
+  /// Aksi long press (mis. close app).
+  final VoidCallback? onLongPress;
+
+  /// Durasi tahan sebelum long press ter-trigger.
+  final Duration longPressDuration;
+
   /// State persistent aktif (mis. mic muted) — PRD §2.3.
   final bool active;
 
@@ -24,6 +33,9 @@ class ActionCard extends StatelessWidget {
     required this.icon,
     this.accentColor,
     this.onTap,
+    this.onDoubleTap,
+    this.onLongPress,
+    this.longPressDuration = const Duration(milliseconds: 600),
     this.active = false,
     this.haptic = DashHaptic.light,
   });
@@ -32,6 +44,9 @@ class ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DashKeyButton(
       onPressed: onTap,
+      onDoubleTap: onDoubleTap,
+      onLongPress: onLongPress,
+      longPressDuration: longPressDuration,
       disabled: onTap == null,
       active: active,
       accentColor: accentColor,
