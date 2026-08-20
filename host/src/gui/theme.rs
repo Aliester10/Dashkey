@@ -158,17 +158,23 @@ pub fn setup_fonts(ctx: &egui::Context) {
         FontData::from_static(include_bytes!("../../assets/fonts/Phosphor-Regular.ttf")).into(),
     );
 
-    // Family default memakai Inter; Phosphor hanya lewat FontId eksplisit.
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(0, FONT_INTER.into());
-    fonts
-        .families
-        .entry(FontFamily::Monospace)
-        .or_default()
-        .insert(0, FONT_INTER.into());
+    // Family default memakai Inter; ditambah Phosphor sebagai fallback agar ikon muncul otomatis di mana saja.
+    {
+        let prop = fonts
+            .families
+            .entry(FontFamily::Proportional)
+            .or_default();
+        prop.insert(0, FONT_INTER.into());
+        prop.push(FONT_PHOSPHOR.into());
+    }
+    {
+        let mono = fonts
+            .families
+            .entry(FontFamily::Monospace)
+            .or_default();
+        mono.insert(0, FONT_INTER.into());
+        mono.push(FONT_PHOSPHOR.into());
+    }
 
     // Daftarkan setiap family bernama agar FontId::Name(...) valid.
     for name in [

@@ -595,55 +595,71 @@ impl DesktopGui {
 
                 ui.add_space(22.0);
 
-                // ── 4 stat cards ─────────────────────────────────────────
+                // ── 4 stat cards (Responsive) ────────────────────────────
                 let mut nav: Option<Tab> = None;
-                ui.columns(4, |columns| {
-                    let device_val = self.server.connection_count().to_string();
-                    let profile_val = snapshot.profiles.len().to_string();
-                    let page_val = snapshot.pages.len().to_string();
-                    let button_val = snapshot.buttons.len().to_string();
-                    let cards = [
-                        (
-                            icons::PLUGS,
-                            "DEVICE",
-                            device_val.as_str(),
-                            "→ Devices",
-                            Palette::SUCCESS_TEXT,
-                            Tab::Devices,
-                        ),
-                        (
-                            icons::USER_CIRCLE,
-                            "PROFILE",
-                            profile_val.as_str(),
-                            "→ Profiles",
-                            Palette::BLUE_TEXT,
-                            Tab::Profiles,
-                        ),
-                        (
-                            icons::STACK,
-                            "PAGE",
-                            page_val.as_str(),
-                            "→ Buttons",
-                            Palette::PURPLE_TEXT,
-                            Tab::Buttons,
-                        ),
-                        (
-                            icons::SQUARES_FOUR,
-                            "BUTTON",
-                            button_val.as_str(),
-                            "→ Buttons",
-                            Palette::TEXT_SECONDARY,
-                            Tab::Buttons,
-                        ),
-                    ];
-                    for (col, (icon, label, value, caption, accent, tab)) in
-                        columns.iter_mut().zip(cards)
-                    {
-                        if widgets::neo_stat_card(col, icon, label, value, caption, accent) {
-                            nav = Some(tab);
-                        }
+                
+                let avail_width = ui.available_width();
+                let min_card_width = 220.0;
+                let spacing = 16.0;
+                let mut num_cols = ((avail_width + spacing) / (min_card_width + spacing)).floor() as usize;
+                if num_cols < 1 { num_cols = 1; }
+                if num_cols > 4 { num_cols = 4; }
+                let card_width = ((avail_width - ((num_cols - 1) as f32 * spacing)) / num_cols as f32).floor();
+
+                let device_val = self.server.connection_count().to_string();
+                let profile_val = snapshot.profiles.len().to_string();
+                let page_val = snapshot.pages.len().to_string();
+                let button_val = snapshot.buttons.len().to_string();
+                let cards = [
+                    (
+                        icons::PLUGS,
+                        "DEVICE",
+                        device_val.as_str(),
+                        "→ Devices",
+                        Palette::SUCCESS_TEXT,
+                        Tab::Devices,
+                    ),
+                    (
+                        icons::USER_CIRCLE,
+                        "PROFILE",
+                        profile_val.as_str(),
+                        "→ Profiles",
+                        Palette::BLUE_TEXT,
+                        Tab::Profiles,
+                    ),
+                    (
+                        icons::STACK,
+                        "PAGE",
+                        page_val.as_str(),
+                        "→ Buttons",
+                        Palette::PURPLE_TEXT,
+                        Tab::Buttons,
+                    ),
+                    (
+                        icons::SQUARES_FOUR,
+                        "BUTTON",
+                        button_val.as_str(),
+                        "→ Buttons",
+                        Palette::TEXT_SECONDARY,
+                        Tab::Buttons,
+                    ),
+                ];
+
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(spacing, spacing);
+                    for (icon, label, value, caption, accent, tab) in cards {
+                        ui.allocate_ui_with_layout(
+                            egui::vec2(card_width, 118.0),
+                            egui::Layout::top_down(egui::Align::Min),
+                            |ui| {
+                                if widgets::neo_stat_card(ui, icon, label, value, caption, accent) {
+                                    nav = Some(tab);
+                                }
+                            }
+                        );
                     }
                 });
+                
                 if let Some(tab) = nav.take() {
                     self.tab = tab;
                 }
@@ -651,122 +667,148 @@ impl DesktopGui {
                 ui.add_space(26.0);
 
                 // ── Quick start + Activity ───────────────────────────────
-                ui.columns(2, |columns| {
-                    // Quick start (panel raised)
-                    let qs_w = columns[0].available_width();
-                    let btn_w = qs_w - 36.0;
-                    widgets::neo_panel_fixed(
-                        &mut columns[0],
-                        egui::vec2(qs_w, 240.0),
-                        theme::RADIUS_CARD,
-                        widgets::NeoKind::Raised,
-                        |ui| {
-                            ui.add_space(18.0);
-                            ui.horizontal(|ui| {
-                                ui.add_space(18.0);
-                                widgets::section_label(ui, "Quick Start");
-                            });
-                            ui.add_space(10.0);
-                            ui.horizontal(|ui| {
-                                ui.add_space(18.0);
-                                ui.label(
-                                    egui::RichText::new(
-                                        "Pairing HP, lalu tambahkan aplikasi sebagai shortcut.",
-                                    )
-                                    .font(theme::font_regular(12.5))
-                                    .color(Palette::TEXT_MUTED),
-                                );
-                            });
-                            ui.add_space(16.0);
-                            ui.horizontal(|ui| {
-                                ui.add_space(18.0);
-                                if widgets::neo_button(
-                                    ui,
-                                    egui::vec2(btn_w, 40.0),
-                                    theme::RADIUS_CHIP,
-                                    Some(icons::QR_CODE),
-                                    "Pair device baru",
-                                )
-                                .clicked()
-                                {
-                                    // navigasi via flag di luar closure
-                                }
-                            });
-                            ui.add_space(10.0);
-                            ui.horizontal(|ui| {
-                                ui.add_space(18.0);
-                                if widgets::neo_button(
-                                    ui,
-                                    egui::vec2(btn_w, 40.0),
-                                    theme::RADIUS_CHIP,
-                                    Some(icons::SQUARES_FOUR),
-                                    "Kelola tombol",
-                                )
-                                .clicked()
-                                {
-                                    nav = Some(Tab::Buttons);
-                                }
-                            });
-                            ui.add_space(10.0);
-                            ui.horizontal(|ui| {
-                                ui.add_space(18.0);
-                                if widgets::neo_button(
-                                    ui,
-                                    egui::vec2(btn_w, 40.0),
-                                    theme::RADIUS_CHIP,
-                                    Some(icons::PLUGS),
-                                    "Integrasi OBS & soundboard",
-                                )
-                                .clicked()
-                                {
-                                    nav = Some(Tab::Integrations);
-                                }
-                            });
-                        },
-                    );
+                let mut nav: Option<Tab> = None;
+                
+                let avail_width = ui.available_width();
+                let min_panel_width = 380.0;
+                let spacing = 16.0;
+                let mut num_cols = ((avail_width + spacing) / (min_panel_width + spacing)).floor() as usize;
+                if num_cols < 1 { num_cols = 1; }
+                if num_cols > 2 { num_cols = 2; }
+                let panel_width = ((avail_width - ((num_cols - 1) as f32 * spacing)) / num_cols as f32).floor();
 
-                    // Activity feed (panel raised)
-                    let act_w = columns[1].available_width();
-                    widgets::neo_panel_fixed(
-                        &mut columns[1],
-                        egui::vec2(act_w, 240.0),
-                        theme::RADIUS_CARD,
-                        widgets::NeoKind::Raised,
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(spacing, spacing);
+                    
+                    // Quick start (panel raised)
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(panel_width, 240.0),
+                        egui::Layout::top_down(egui::Align::Min),
                         |ui| {
-                            ui.add_space(18.0);
-                            ui.horizontal(|ui| {
-                                ui.add_space(18.0);
-                                widgets::section_label(ui, "Recent Activity");
-                            });
-                            ui.add_space(10.0);
-                            if self.activity.is_empty() {
-                                ui.label(
-                                    egui::RichText::new("Belum ada aktivitas.")
-                                        .font(theme::font_regular(12.5))
-                                        .color(Palette::TEXT_MUTED),
-                                );
-                            } else {
-                                for item in self.activity.iter().rev().take(5) {
+                            let btn_w = panel_width - 36.0;
+                            widgets::neo_panel_fixed(
+                                ui,
+                                egui::vec2(panel_width, 240.0),
+                                theme::RADIUS_CARD,
+                                widgets::NeoKind::Raised,
+                                |ui| {
+                                    ui.add_space(18.0);
+                                    ui.horizontal(|ui| {
+                                        ui.add_space(18.0);
+                                        widgets::section_label(ui, "Quick Start");
+                                    });
+                                    ui.add_space(10.0);
                                     ui.horizontal(|ui| {
                                         ui.add_space(18.0);
                                         ui.label(
-                                            egui::RichText::new("•")
-                                                .font(theme::font_bold(14.0))
-                                                .color(Palette::ACCENT),
-                                        );
-                                        ui.add_space(6.0);
-                                        ui.label(
-                                            egui::RichText::new(item)
-                                                .font(theme::font_regular(12.5))
-                                                .color(Palette::TEXT_SECONDARY),
+                                            egui::RichText::new(
+                                                "Pairing HP, lalu tambahkan aplikasi sebagai shortcut.",
+                                            )
+                                            .font(theme::font_regular(12.5))
+                                            .color(Palette::TEXT_MUTED),
                                         );
                                     });
-                                    ui.add_space(4.0);
-                                }
-                            }
-                        },
+                                    ui.add_space(16.0);
+                                    ui.horizontal(|ui| {
+                                        ui.add_space(18.0);
+                                        if widgets::neo_button(
+                                            ui,
+                                            egui::vec2(btn_w, 40.0),
+                                            theme::RADIUS_CHIP,
+                                            Some(icons::QR_CODE),
+                                            "Pair device baru",
+                                        )
+                                        .clicked()
+                                        {
+                                            nav = Some(Tab::Pairing);
+                                        }
+                                    });
+                                    ui.add_space(10.0);
+                                    ui.horizontal(|ui| {
+                                        ui.add_space(18.0);
+                                        if widgets::neo_button(
+                                            ui,
+                                            egui::vec2(btn_w, 40.0),
+                                            theme::RADIUS_CHIP,
+                                            Some(icons::SQUARES_FOUR),
+                                            "Kelola tombol",
+                                        )
+                                        .clicked()
+                                        {
+                                            nav = Some(Tab::Buttons);
+                                        }
+                                    });
+                                    ui.add_space(10.0);
+                                    ui.horizontal(|ui| {
+                                        ui.add_space(18.0);
+                                        if widgets::neo_button(
+                                            ui,
+                                            egui::vec2(btn_w, 40.0),
+                                            theme::RADIUS_CHIP,
+                                            Some(icons::PLUGS),
+                                            "Integrasi OBS & soundboard",
+                                        )
+                                        .clicked()
+                                        {
+                                            nav = Some(Tab::Integrations);
+                                        }
+                                    });
+                                },
+                            );
+                        }
+                    );
+
+                    // Activity feed (panel raised)
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(panel_width, 240.0),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
+                            widgets::neo_panel_fixed(
+                                ui,
+                                egui::vec2(panel_width, 240.0),
+                                theme::RADIUS_CARD,
+                                widgets::NeoKind::Raised,
+                                |ui| {
+                                    ui.add_space(18.0);
+                                    ui.horizontal(|ui| {
+                                        ui.add_space(18.0);
+                                        widgets::section_label(ui, "Recent Activity");
+                                    });
+                                    ui.add_space(10.0);
+                                    if self.activity.is_empty() {
+                                        ui.horizontal(|ui| {
+                                            ui.add_space(18.0);
+                                            ui.label(
+                                                egui::RichText::new("Belum ada aktivitas.")
+                                                    .font(theme::font_regular(12.5))
+                                                    .color(Palette::TEXT_MUTED),
+                                            );
+                                        });
+                                    } else {
+                                        for item in self.activity.iter().rev().take(5) {
+                                            ui.horizontal(|ui| {
+                                                ui.add_space(18.0);
+                                                ui.label(
+                                                    egui::RichText::new("•")
+                                                        .font(theme::font_bold(14.0))
+                                                        .color(Palette::ACCENT),
+                                                );
+                                                ui.add_space(6.0);
+                                                ui.label(
+                                                    egui::RichText::new(item)
+                                                        .font(theme::font_regular(12.5))
+                                                        .color(Palette::TEXT_SECONDARY),
+                                                );
+                                            });
+                                            ui.add_space(4.0);
+                                        }
+                                    }
+                                },
+                            );
+                        }
                     );
                 });
+                
                 if let Some(tab) = nav.take() {
                     self.tab = tab;
                 }
