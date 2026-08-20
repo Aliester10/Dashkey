@@ -190,6 +190,28 @@ class _InteractionSettings extends ConsumerWidget {
           value: settings.soundEnabled,
           onChanged: engine.setSoundEnabled,
         ),
+        const Divider(height: 16),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Long press = tutup aplikasi'),
+          subtitle: const Text('Tahan tombol untuk menutup aplikasi yang '
+              'dibuka tombol tersebut'),
+          value: settings.longPressClose,
+          onChanged: engine.setLongPressClose,
+        ),
+        if (settings.longPressClose)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Durasi Long Press'),
+            subtitle: Slider(
+              value: settings.longPressMs.toDouble(),
+              min: 300,
+              max: 1500,
+              divisions: 12,
+              label: '${settings.longPressMs} ms',
+              onChanged: (v) => engine.setLongPressMs(v.round()),
+            ),
+          ),
       ],
     );
   }

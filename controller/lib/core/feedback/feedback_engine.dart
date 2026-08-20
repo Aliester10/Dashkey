@@ -85,6 +85,16 @@ class FeedbackEngine extends Notifier<FeedbackSettings> {
     await _persist();
   }
 
+  Future<void> setLongPressClose(bool enabled) async {
+    state = state.copyWith(longPressClose: enabled);
+    await _persist();
+  }
+
+  Future<void> setLongPressMs(int ms) async {
+    state = state.copyWith(longPressMs: ms.clamp(300, 1500));
+    await _persist();
+  }
+
   /// Titik masuk tunggal: panggil saat tombol ditekan.
   Future<void> trigger(DashHaptic haptic) async {
     final settings = state;

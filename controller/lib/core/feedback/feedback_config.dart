@@ -34,6 +34,8 @@ class FeedbackSettings {
     this.animationSpeed = 1.0, // 0.5..1.5
     this.soundEnabled = false,
     this.soundVolume = 1.0, // 0..1 (cadangan untuk custom sound)
+    this.longPressClose = true,
+    this.longPressMs = 600,
   });
 
   final FeedbackProfile profile;
@@ -43,6 +45,12 @@ class FeedbackSettings {
   final double animationSpeed;
   final bool soundEnabled;
   final double soundVolume;
+
+  /// Long press pada tombol = menutup aplikasi (default global).
+  final bool longPressClose;
+
+  /// Durasi tahan sebelum close di-trigger (ms).
+  final int longPressMs;
 
   /// Nilai default profil (PRD §9, §10).
   static const defaults = {
@@ -82,6 +90,8 @@ class FeedbackSettings {
     double? animationSpeed,
     bool? soundEnabled,
     double? soundVolume,
+    bool? longPressClose,
+    int? longPressMs,
   }) =>
       FeedbackSettings(
         profile: profile ?? this.profile,
@@ -91,6 +101,8 @@ class FeedbackSettings {
         animationSpeed: animationSpeed ?? this.animationSpeed,
         soundEnabled: soundEnabled ?? this.soundEnabled,
         soundVolume: soundVolume ?? this.soundVolume,
+        longPressClose: longPressClose ?? this.longPressClose,
+        longPressMs: longPressMs ?? this.longPressMs,
       );
 
   Map<String, dynamic> toJson() => {
@@ -101,6 +113,8 @@ class FeedbackSettings {
         'animationSpeed': animationSpeed,
         'soundEnabled': soundEnabled,
         'soundVolume': soundVolume,
+        'longPressClose': longPressClose,
+        'longPressMs': longPressMs,
       };
 
   factory FeedbackSettings.fromJson(Map<String, dynamic> json) =>
@@ -115,5 +129,7 @@ class FeedbackSettings {
         animationSpeed: (json['animationSpeed'] as num?)?.toDouble() ?? 1.0,
         soundEnabled: json['soundEnabled'] as bool? ?? false,
         soundVolume: (json['soundVolume'] as num?)?.toDouble() ?? 1.0,
+        longPressClose: json['longPressClose'] as bool? ?? true,
+        longPressMs: json['longPressMs'] as int? ?? 600,
       );
 }
