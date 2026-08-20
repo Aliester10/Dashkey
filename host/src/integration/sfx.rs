@@ -233,7 +233,10 @@ async fn download(url: &str, dest: &Path) -> Result<(), String> {
 pub fn load_image_base64(path: &str) -> Option<String> {
     let p = Path::new(path);
     let ext = p.extension()?.to_str()?.to_ascii_lowercase();
-    if !matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp" | "ico" | "gif") {
+    if !matches!(
+        ext.as_str(),
+        "png" | "jpg" | "jpeg" | "webp" | "ico" | "gif"
+    ) {
         return None;
     }
     let meta = std::fs::metadata(p).ok()?;

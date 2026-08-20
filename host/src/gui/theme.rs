@@ -10,11 +10,11 @@ use eframe::egui;
 // ---------------------------------------------------------------------------
 
 /// Radius untuk card / panel.
-pub const RADIUS_CARD: f32 = 12.0;
+pub const RADIUS_CARD: f32 = 16.0;
 /// Radius untuk pill badge, tab aktif.
-pub const RADIUS_PILL: f32 = 20.0;
+pub const RADIUS_PILL: f32 = 999.0;
 /// Radius untuk chip icon (bulat).
-pub const RADIUS_CHIP: f32 = 8.0;
+pub const RADIUS_CHIP: f32 = 12.0;
 
 // ---------------------------------------------------------------------------
 // Palet warna
@@ -25,24 +25,24 @@ pub struct Palette;
 impl Palette {
     // ── Surface (latar belakang berlapis) ──────────────────────────────────
     /// Latar paling dalam (panel utama).
-    pub const SURFACE_0: egui::Color32 = egui::Color32::from_rgb(0x1a, 0x1a, 0x1a);
+    pub const SURFACE_0: egui::Color32 = egui::Color32::from_rgb(0x11, 0x15, 0x1F);
     /// Card satu lapis.
-    pub const SURFACE_1: egui::Color32 = egui::Color32::from_rgb(0x24, 0x24, 0x24);
+    pub const SURFACE_1: egui::Color32 = egui::Color32::from_rgb(0x1A, 0x20, 0x2C);
     /// Card dua lapis / hover.
-    pub const SURFACE_2: egui::Color32 = egui::Color32::from_rgb(0x2c, 0x2c, 0x2c);
+    pub const SURFACE_2: egui::Color32 = egui::Color32::from_rgb(0x1B, 0x21, 0x30);
     /// Border halus.
-    pub const BORDER: egui::Color32 = egui::Color32::from_rgb(0x38, 0x38, 0x38);
+    pub const BORDER: egui::Color32 = egui::Color32::from_rgb(0x28, 0x2D, 0x39);
 
     // ── Teks ──────────────────────────────────────────────────────────────
-    pub const TEXT_PRIMARY: egui::Color32 = egui::Color32::from_rgb(0xf5, 0xf5, 0xf5);
-    pub const TEXT_SECONDARY: egui::Color32 = egui::Color32::from_rgb(0xa0, 0xa0, 0xa0);
-    pub const TEXT_MUTED: egui::Color32 = egui::Color32::from_rgb(0x70, 0x70, 0x70);
+    pub const TEXT_PRIMARY: egui::Color32 = egui::Color32::from_rgb(0xF1, 0xF5, 0xF9);
+    pub const TEXT_SECONDARY: egui::Color32 = egui::Color32::from_rgb(0x7F, 0x87, 0x98);
+    pub const TEXT_MUTED: egui::Color32 = egui::Color32::from_rgb(0x6F, 0x78, 0x8A);
 
     // ── Aksen (ungu brand) ─────────────────────────────────────────────────
-    pub const ACCENT: egui::Color32 = egui::Color32::from_rgb(0x53, 0x4A, 0xB7);
+    pub const ACCENT: egui::Color32 = egui::Color32::from_rgb(0x8B, 0x5C, 0xF6);
     #[allow(dead_code)]
-    pub const ACCENT_HOVER: egui::Color32 = egui::Color32::from_rgb(0x65, 0x5C, 0xCF);
-    pub const ACCENT_TEXT_ON: egui::Color32 = egui::Color32::from_rgb(0xEE, 0xED, 0xFE);
+    pub const ACCENT_HOVER: egui::Color32 = egui::Color32::from_rgb(0xA7, 0x8B, 0xFA);
+    pub const ACCENT_TEXT_ON: egui::Color32 = egui::Color32::from_rgb(0xFF, 0xFF, 0xFF);
 
     // ── Role colors (icon chip / status badge) ─────────────────────────────
     /// Hijau — device online, sukses.
