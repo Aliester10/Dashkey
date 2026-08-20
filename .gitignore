@@ -34,3 +34,12 @@ controller/windows/flutter/ephemeral/
 # Log & temp
 *.log
 /tmp/
+
+# Dokumen internal (jangan di-publish ke repo public)
+PRD.md
+Prd2.md
+clockprd.md
+prdbutton.md
+README_PROJECT_ANALYSIS.md
+desain.md
+dashboard.md
