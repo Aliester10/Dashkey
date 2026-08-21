@@ -21,6 +21,7 @@ class AppColors {
   static const Color brightBlueAccent = Color(0xFF91A0FF);
   static const Color googleBlue = Color(0xFF4285F4);
   static const Color successGreen = Color(0xFF10B981);
+  static const Color warningYellow = Color(0xFFF59E0B);
   static const Color cyanAccent = Color(0xFF06B6D4);
   static const Color dangerRed = Color(0xFFEF4444);
   static const Color discordPurple = Color(0xFF5865F2);
