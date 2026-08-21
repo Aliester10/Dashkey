@@ -26,6 +26,7 @@ pub const SPACE_S: f32 = 8.0;
 pub const SPACE_M: f32 = 12.0;
 pub const SPACE_L: f32 = 16.0;
 pub const SPACE_XL: f32 = 24.0;
+pub const SPACE_XXL: f32 = 32.0;
 
 // ---------------------------------------------------------------------------
 // Palet warna — dark neumorphism (surface senada latar, aksen ungu)
