@@ -80,7 +80,26 @@ impl DesktopGui {
                 ui.horizontal(|ui| {
                     section_header(ui, "EVENT TIMELINE");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Clear activity").clicked() {
+                        let can_clear = !self.activity.is_empty();
+                        if ui
+                            .add_enabled(
+                                can_clear,
+                                egui::Button::new(RichText::new("Clear activity").color(
+                                    if can_clear {
+                                        Palette::RED_TEXT
+                                    } else {
+                                        Palette::TEXT_MUTED
+                                    },
+                                ))
+                                .fill(if can_clear {
+                                    Palette::RED_BG
+                                } else {
+                                    Palette::SURFACE_2
+                                }),
+                            )
+                            .on_hover_text("Hapus semua event activity")
+                            .clicked()
+                        {
                             self.activity.clear();
                             self.status = "Activity dibersihkan".into();
                         }
