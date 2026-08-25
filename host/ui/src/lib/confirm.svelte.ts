@@ -1,0 +1,44 @@
+import { getContext, setContext } from "svelte";
+
+export interface ConfirmRequest {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
+}
+
+interface PendingConfirm {
+  req: ConfirmRequest;
+  resolve: (v: boolean) => void;
+}
+
+export function createConfirmCtx() {
+  let pending = $state<PendingConfirm | null>(null);
+
+  function requestConfirm(req: ConfirmRequest): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      pending = { req, resolve };
+    });
+  }
+
+  function settle(v: boolean) {
+    if (pending) {
+      pending.resolve(v);
+      pending = null;
+    }
+  }
+
+  return { pending, requestConfirm, settle };
+}
+
+export type ConfirmCtx = ReturnType<typeof createConfirmCtx>;
+
+const CONFIRM_KEY = Symbol("confirm");
+
+export function setConfirmCtx(ctx: ConfirmCtx) {
+  setContext(CONFIRM_KEY, ctx);
+}
+
+export function getConfirmCtx(): ConfirmCtx {
+  return getContext<ConfirmCtx>(CONFIRM_KEY);
+}
