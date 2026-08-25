@@ -1,6 +1,11 @@
 # Rust (Host)
 host/target/
+host/ui/src-tauri/target/
 **/*.rs.bk
+
+# Frontend (Tauri UI)
+host/ui/node_modules/
+host/ui/dist/
 
 # Flutter (Controller)
 controller/build/
