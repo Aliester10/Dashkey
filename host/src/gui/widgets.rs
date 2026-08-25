@@ -13,7 +13,7 @@ use super::theme::{Palette, BUTTON_COLOR_OPTIONS, RADIUS_CARD, RADIUS_CHIP, RADI
 
 /// Render card dengan rounded corner dan padding standar.
 ///
-/// ```rust
+/// ```text
 /// card(ui, Palette::SURFACE_1, |ui| {
 ///     ui.label("Isi card");
 /// });
