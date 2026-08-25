@@ -77,6 +77,9 @@ pub struct Server {
     /// Semua sesi koneksi (termasuk yang belum autentikasi) untuk GUI.
     sessions: RwLock<HashMap<u64, ClientSession>>,
     next_client_id: AtomicU64,
+    /// Callback event ke GUI (mis. Tauri): dipanggil saat config berubah
+    /// atau status device berubah. Nama event: "config_synced", "device_status".
+    event_cb: RwLock<Option<Arc<dyn Fn(&str) + Send + Sync>>>,
 }
 
 impl Server {
@@ -90,7 +93,20 @@ impl Server {
             connections: RwLock::new(HashMap::new()),
             sessions: RwLock::new(HashMap::new()),
             next_client_id: AtomicU64::new(1),
+            event_cb: RwLock::new(None),
         })
+    }
+
+    /// Pasang callback event (dipakai GUI Tauri untuk sinkronisasi real-time).
+    pub fn set_event_cb(&self, cb: Option<Arc<dyn Fn(&str) + Send + Sync>>) {
+        *self.event_cb.write().unwrap() = cb;
+    }
+
+    /// Kirim event ke callback GUI (jika terpasang).
+    fn emit_event(&self, name: &str) {
+        if let Some(cb) = self.event_cb.read().unwrap().as_ref() {
+            cb(name);
+        }
     }
 
     /// Jumlah koneksi terautentikasi (untuk GUI desktop).
@@ -128,6 +144,7 @@ impl Server {
                             connected_at: std::time::Instant::now(),
                         },
                     );
+                    self.emit_event("device_status");
                     let server = Arc::clone(&self);
                     tokio::spawn(async move {
                         if let Err(e) = server.handle_connection(client_id, stream).await {
@@ -188,6 +205,7 @@ impl Server {
         drop(conn);
         self.connections.write().unwrap().remove(&client_id);
         self.sessions.write().unwrap().remove(&client_id);
+        self.emit_event("device_status");
         let _ = writer.await;
         info!(client_id, device = ?session.device_id, "koneksi ditutup");
         Ok(())
@@ -237,6 +255,7 @@ impl Server {
                     if let Some(s) = self.sessions.write().unwrap().get_mut(&client_id) {
                         s.device_id = Some(device_id.clone());
                     }
+                    self.emit_event("device_status");
                     replies.push(OutboundMessage::AuthSuccess {
                         host_name: self.state.host_name.clone(),
                     });
@@ -500,6 +519,7 @@ impl Server {
     pub fn broadcast_config_sync(&self) {
         let msg = self.config_sync_message();
         self.broadcast(&msg);
+        self.emit_event("config_synced");
     }
 
     /// Broadcast pesan apa pun ke semua koneksi terautentikasi.

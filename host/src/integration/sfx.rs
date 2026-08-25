@@ -14,7 +14,7 @@ use std::path::Path;
 use tracing::info;
 
 /// Hasil impor SFX.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct SfxImport {
     /// Nama file yang tersimpan di `sounds/` (mis. `fahhhhhhhhhhhhhh.mp3`).
     pub file_name: String,
