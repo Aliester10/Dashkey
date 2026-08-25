@@ -67,6 +67,7 @@ Fullscreen ambient **mechanical flip clock** with dark neumorphism:
 - **Automatic installed-app detection** (Start Menu / .desktop) — pick & add as a button
 - Live pairing QR, device status (online/offline), access revocation
 - OBS configuration & connection test, soundboard explorer, activity log, settings
+- Dibangun dengan **Tauri v2**: core Rust tetap, tampilan web modern (Svelte + Tailwind), ringan & cepat
 
 ### 🔄 Real-Time Sync
 - Config changes from **desktop GUI ↔ phone** sync instantly (WebSocket broadcast)
@@ -93,7 +94,7 @@ Fullscreen ambient **mechanical flip clock** with dark neumorphism:
   ├─ Action Executor    — enigo (keyboard/mouse), shell, media keys
   ├─ Config Store       — profiles/pages/buttons (source of truth, JSON)
   ├─ Integration        — OBS WebSocket, audio player (rodio), SFX importer
-  └─ Desktop GUI        — egui/eframe (editor, devices, pairing, settings)
+  └─ Desktop GUI        — Tauri v2 (Rust core + web frontend, src-tauri/ + ui/)
         │
         ▼  config_sync / status_update broadcast
    Controller UI updated in real-time
@@ -118,7 +119,7 @@ Lightweight JSON messages — one source of truth defined in `host/src/protocol.
 |---|---|
 | Host — Core | Rust · tokio · tokio-tungstenite · serde |
 | Host — Automation | enigo (keyboard/mouse) · rodio (audio) · obws (OBS) |
-| Host — GUI | egui / eframe · tray-ready |
+| Host — GUI | Tauri v2 (Rust core + web frontend) · Vite · Svelte 5 · Tailwind v4 · WebView2 |
 | Controller — App | Flutter · Riverpod 3 · web_socket_channel |
 | Controller — Extras | mobile_scanner (QR) · flutter_secure_storage · shared_preferences · google_fonts |
 
@@ -130,9 +131,15 @@ Lightweight JSON messages — one source of truth defined in `host/src/protocol.
 
 ```bash
 cd host
-cargo run            # server + desktop GUI
+cargo run            # server + desktop GUI (legacy egui)
 cargo run -- --no-gui   # headless mode
 cargo run -- pair       # pairing QR in terminal
+
+# GUI baru (Tauri v2) — butuh Node.js:
+cd host/ui
+npm install
+npm run tauri dev    # dev mode (vite + webview)
+npm run tauri build  # build installer
 ```
 
 Host listens on **port 48484** (`DASHKEY_PORT` to override). Data lives in `%APPDATA%\DashKey` (Windows) or `~/.config/dashkey` (Linux).
@@ -155,15 +162,20 @@ flutter run          # or: flutter build apk --debug
 ## 🗂️ Repository Structure
 
 ```
-├── host/                 # Rust — server, action executor, desktop GUI
-│   ├── src/
+├── host/                 # Rust core + GUI desktop (Tauri)
+│   ├── src/              # core library (server, auth, actions, config, integrasi)
+│   │   ├── lib.rs        # core library (dipakai legacy + Tauri binary)
+│   │   ├── main.rs       # binary legacy (egui) / headless / pairing
 │   │   ├── protocol.rs   # WebSocket message definitions (single source of truth)
 │   │   ├── network/      # WebSocket server, sessions, broadcast
 │   │   ├── auth/         # pairing tokens, device registry
 │   │   ├── actions/      # action executor (keyboard/mouse/media/shell)
 │   │   ├── config/       # profiles/pages/buttons store + validation
 │   │   ├── integration/  # OBS, audio, SFX importer
-│   │   └── gui/          # egui desktop app
+│   │   └── gui/          # GUI egui lama (legacy, bertahap dipindah)
+│   ├── ui/               # frontend root Tauri (Vite + Svelte + Tailwind)
+│   │   ├── src/          # frontend web
+│   │   └── src-tauri/    # binary GUI Tauri v2 (Rust wrapper + commands)
 │   └── Cargo.toml
 ├── controller/           # Flutter app
 │   └── lib/
