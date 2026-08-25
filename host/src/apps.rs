@@ -8,7 +8,7 @@
 use std::path::PathBuf;
 
 /// Aplikasi terdeteksi — siap dijadikan aksi `open_app`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DetectedApp {
     pub name: String,
     pub target: String,

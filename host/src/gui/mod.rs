@@ -5,7 +5,6 @@
 //! semua device terhubung, sehingga HP ikut tersinkron real-time.
 
 pub mod activity;
-pub mod app_detector;
 pub mod buttons;
 pub mod devices;
 pub mod icons;
@@ -28,7 +27,7 @@ use crate::config::{Action, Button, ConfigStore};
 use crate::network::Server;
 use crate::state::AppState;
 
-use self::app_detector::{detect_apps, DetectedApp};
+use crate::apps::{detect_apps, DetectedApp};
 
 /// Jalankan GUI desktop (blocking hingga window ditutup).
 pub fn run(state: Arc<AppState>, server: Arc<Server>, port: u16) -> anyhow::Result<()> {

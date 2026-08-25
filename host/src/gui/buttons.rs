@@ -9,7 +9,7 @@ use eframe::egui::{self, Color32, ComboBox, RichText, ScrollArea};
 
 use crate::config::{Action, Config};
 
-use super::app_detector::{detect_apps, DetectedApp};
+use crate::apps::{detect_apps, DetectedApp};
 use super::theme::Palette;
 use super::widgets::{
     action_category_row, action_chain_display, action_sub_item, button_tile, color_swatch_picker,

@@ -182,7 +182,7 @@ impl DesktopGui {
                         ui.add_space(8.0);
                         ui.label(format!("{} aplikasi terdeteksi", self.detected_apps.len()));
                         if ui.button("⟳ Scan ulang aplikasi").clicked() {
-                            self.detected_apps = super::app_detector::detect_apps();
+                            self.detected_apps = crate::apps::detect_apps();
                             self.log_event(format!(
                                 "{} aplikasi terdeteksi",
                                 self.detected_apps.len()
