@@ -13,22 +13,22 @@ interface PendingConfirm {
 }
 
 export function createConfirmCtx() {
-  let pending = $state<PendingConfirm | null>(null);
+  const state = $state<{ pending: PendingConfirm | null }>({ pending: null });
 
   function requestConfirm(req: ConfirmRequest): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      pending = { req, resolve };
+      state.pending = { req, resolve };
     });
   }
 
   function settle(v: boolean) {
-    if (pending) {
-      pending.resolve(v);
-      pending = null;
+    if (state.pending) {
+      state.pending.resolve(v);
+      state.pending = null;
     }
   }
 
-  return { pending, requestConfirm, settle };
+  return { state, requestConfirm, settle };
 }
 
 export type ConfirmCtx = ReturnType<typeof createConfirmCtx>;
