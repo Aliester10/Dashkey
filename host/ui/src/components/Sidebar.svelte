@@ -21,7 +21,7 @@
 </script>
 
 <aside
-  class="flex h-full w-[228px] shrink-0 flex-col border-r border-white/5 bg-surface-1/60 px-4 py-5"
+  class="flex h-full w-[228px] shrink-0 flex-col border-r border-border bg-surface-1/60 px-4 py-5"
 >
   <div class="flex items-center gap-3 px-2">
     <div

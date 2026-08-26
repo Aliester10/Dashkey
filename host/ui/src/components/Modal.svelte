@@ -20,7 +20,7 @@
     class="neo-raised relative flex max-h-full w-full flex-col overflow-hidden"
     style={`max-width: ${width}px`}
   >
-    <div class="flex items-center justify-between border-b border-white/5 px-5 py-3.5">
+    <div class="flex items-center justify-between border-b border-border px-5 py-3.5">
       <h3 class="text-[15px] font-semibold text-tprimary">{title}</h3>
       <button class="neo-chip flex h-8 w-8 items-center justify-center text-tmuted icon hover:text-tprimary" onclick={onclose}>
         {ICON.x}

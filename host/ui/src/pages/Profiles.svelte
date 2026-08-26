@@ -148,12 +148,12 @@
                 </div>
                 <div class="mt-1 flex gap-1.5">
                   <button
-                    class="rounded px-2 py-0.5 text-[11px] text-tsecondary hover:bg-white/5"
+                    class="rounded px-2 py-0.5 text-[11px] text-tsecondary hover:bg-hover"
                     onclick={() => (editPage = { pageId, name: page.name, rows: page.grid_size.rows, cols: page.grid_size.cols, pageType: page.page_type })}
                   >
                     Edit
                   </button>
-                  <button class="rounded px-2 py-0.5 text-[11px] text-coral hover:bg-white/5" onclick={() => doDeletePage(pageId, page.name)}>
+                  <button class="rounded px-2 py-0.5 text-[11px] text-coral hover:bg-hover" onclick={() => doDeletePage(pageId, page.name)}>
                     Hapus
                   </button>
                 </div>
@@ -199,11 +199,11 @@
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="card-caption block mb-1.5" for="page-rows">Baris ({editPage.rows})</label>
-          <input id="page-rows" type="range" min="1" max="8" bind:value={editPage.rows} class="w-full accent-[#00ACC1]" />
+          <input id="page-rows" type="range" min="1" max="8" bind:value={editPage.rows} class="w-full accent-accent" />
         </div>
         <div>
           <label class="card-caption block mb-1.5" for="page-cols">Kolom ({editPage.cols})</label>
-          <input id="page-cols" type="range" min="1" max="8" bind:value={editPage.cols} class="w-full accent-[#00ACC1]" />
+          <input id="page-cols" type="range" min="1" max="8" bind:value={editPage.cols} class="w-full accent-accent" />
         </div>
       </div>
       <div>

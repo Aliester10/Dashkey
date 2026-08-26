@@ -1,6 +1,6 @@
 <script lang="ts">
   let { ctx }: { ctx: import("../lib/confirm.svelte.ts").ConfirmCtx } = $props();
-  const p = $derived(ctx.pending);
+  const p = $derived(ctx.state.pending);
 </script>
 
 {#if p}
@@ -16,7 +16,7 @@
           Batal
         </button>
         <button
-          class={`rounded-xl px-4 py-2 text-[13px] font-semibold ${p.req.danger ? "bg-coral/90 text-white" : "bg-accent/90 text-[#041014]"}`}
+          class={`rounded-xl px-4 py-2 text-[13px] font-semibold ${p.req.danger ? "bg-coral/90 text-white" : "bg-accent/90 text-btn-text"}`}
           onclick={() => ctx.settle(true)}
         >
           {p.req.confirmLabel ?? "Ya, lanjutkan"}

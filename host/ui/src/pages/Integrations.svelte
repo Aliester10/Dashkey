@@ -158,7 +158,7 @@
           <p class="text-[12px] text-tmuted">Belum ada file audio.</p>
         {:else}
           {#each sounds as file (file)}
-            <div class="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-white/5">
+            <div class="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-hover">
               <button class="icon text-[14px] text-accent-soft hover:text-tprimary" onclick={() => doPlay(file)}>{ICON.play}</button>
               <span class="min-w-0 flex-1 truncate text-[12.5px] text-tsecondary">{file}</span>
             </div>

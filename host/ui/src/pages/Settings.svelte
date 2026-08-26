@@ -2,10 +2,12 @@
   import { ICON } from "../lib/icons";
   import { getHostInfo, resetConfig, setAutostart } from "../lib/api";
   import { getConfirmCtx } from "../lib/confirm.svelte";
+  import { getThemeCtx } from "../lib/theme.svelte";
   import type { HostInfo } from "../lib/types";
   import PageHeader from "../components/PageHeader.svelte";
 
   const confirm = getConfirmCtx();
+  const themeCtx = getThemeCtx();
 
   let { onMutate }: { onMutate: () => Promise<void> } = $props();
 
@@ -53,9 +55,23 @@
         <div class="text-[16px] font-semibold text-tprimary">Appearance</div>
       </div>
       <div class="mt-4 flex flex-col gap-3 text-[13px] text-tsecondary">
-        <p>Tema gelap aktif untuk menjaga fokus saat streaming.</p>
+        <p>Tema gelap aktif untuk menjaga fokus saat streaming — atau pilih tema terang untuk siang hari.</p>
+        <div class="flex gap-2">
+          <button
+            class={`neo-chip flex-1 px-4 py-2.5 text-[13px] font-medium ${themeCtx.theme === "dark" ? "ring-2 ring-accent-soft text-accent-soft" : "text-tsecondary hover:text-tprimary"}`}
+            onclick={() => themeCtx.set("dark")}
+          >
+            🌙 Gelap
+          </button>
+          <button
+            class={`neo-chip flex-1 px-4 py-2.5 text-[13px] font-medium ${themeCtx.theme === "light" ? "ring-2 ring-accent-soft text-accent-soft" : "text-tsecondary hover:text-tprimary"}`}
+            onclick={() => themeCtx.set("light")}
+          >
+            ☀️ Terang
+          </button>
+        </div>
         <p class="text-[12px] text-tmuted">
-          Tampilan baru dibangun dengan Tauri v2 — neumorphism gelap senada dengan Controller HP.
+          Pilihan tersimpan otomatis; mode awal mengikuti tema sistem.
         </p>
       </div>
     </div>
@@ -88,7 +104,7 @@
             type="checkbox"
             checked={autostart}
             disabled={autostartBusy}
-            class="accent-[#00ACC1]"
+            class="accent-accent"
             onchange={toggleAutostart}
           />
         </label>
