@@ -5,6 +5,7 @@
   import Topbar from "./components/Topbar.svelte";
   import Dashboard from "./components/Dashboard.svelte";
   import ConfirmModal from "./components/ConfirmModal.svelte";
+  import Deck from "./pages/Deck.svelte";
   import Pairing from "./pages/Pairing.svelte";
   import Devices from "./pages/Devices.svelte";
   import Buttons from "./pages/Buttons.svelte";
@@ -14,14 +15,18 @@
   import Settings from "./pages/Settings.svelte";
   import { getSnapshot, getStatus } from "./lib/api";
   import { createConfirmCtx, setConfirmCtx } from "./lib/confirm.svelte";
+  import { createThemeCtx, setThemeCtx } from "./lib/theme.svelte";
   import type { Config, StatusPayload } from "./lib/types";
 
   const confirmCtx = createConfirmCtx();
   setConfirmCtx(confirmCtx);
+  const themeCtx = createThemeCtx();
+  setThemeCtx(themeCtx);
 
   const nav: NavItem[] = [
-    { id: "dashboard", label: "Dashboard", icon: "squares_four" },
-    { id: "buttons", label: "Buttons", icon: "grid_four" },
+    { id: "deck", label: "Deck", icon: "squares_four" },
+    { id: "dashboard", label: "Dashboard", icon: "grid_four" },
+    { id: "buttons", label: "Buttons", icon: "keyboard" },
     { id: "profiles", label: "Profiles", icon: "user_circle" },
     { id: "pairing", label: "Pairing", icon: "qr_code" },
     { id: "devices", label: "Devices", icon: "devices" },
@@ -30,13 +35,13 @@
     { id: "settings", label: "Settings", icon: "gear" },
   ];
 
-  let active = $state("dashboard");
+  let view = $state<"deck" | "manage">("deck");
+  let manageTab = $state("dashboard");
   let config = $state<Config | null>(null);
   let status = $state<StatusPayload | null>(null);
   let error = $state<string | null>(null);
 
   const online = $derived((status?.connectionCount ?? 0) > 0);
-  const title = $derived(nav.find((n) => n.id === active)?.label ?? "DashKey");
 
   async function refreshSnapshot() {
     try {
@@ -83,13 +88,28 @@
   </div>
 {:else if !config || !status}
   <div class="flex h-full items-center justify-center text-[13px] text-tmuted">Memuat…</div>
+{:else if view === "deck"}
+  <!-- Tampilan utama: button deck + sidebar apps -->
+  <Deck {config} {status} onMutate={refresh} onOpenManage={() => (view = "manage")} />
 {:else}
+  <!-- Panel manajemen: semua halaman lengkap -->
   <div class="flex h-full">
-    <Sidebar items={nav} {active} {online} onselect={(id) => (active = id)} />
+    <Sidebar
+      items={nav}
+      active={manageTab}
+      {online}
+      onselect={(id) => {
+        if (id === "deck") {
+          view = "deck";
+        } else {
+          manageTab = id;
+        }
+      }}
+    />
     <div class="flex min-w-0 flex-1 flex-col">
       <Topbar
-        {title}
-        subtitle={active === "dashboard" ? "Pusat kendali DashKey — device, tombol, dan integrasi PC." : ""}
+        title={nav.find((n) => n.id === manageTab)?.label ?? "DashKey"}
+        subtitle={manageTab === "dashboard" ? "Pusat kendali DashKey — device, tombol, dan integrasi PC." : ""}
         {online}
         deviceCount={status.connectionCount}
         hostIp={status.hostIp}
@@ -97,21 +117,21 @@
         port={status.port}
       />
       <main class="min-h-0 flex-1 overflow-hidden">
-        {#if active === "dashboard"}
-          <Dashboard {config} {status} onNavigate={(id) => (active = id)} />
-        {:else if active === "buttons"}
+        {#if manageTab === "dashboard"}
+          <Dashboard {config} {status} onNavigate={(id) => (manageTab = id)} />
+        {:else if manageTab === "buttons"}
           <Buttons {config} onMutate={refresh} />
-        {:else if active === "profiles"}
+        {:else if manageTab === "profiles"}
           <Profiles {config} onMutate={refresh} />
-        {:else if active === "pairing"}
+        {:else if manageTab === "pairing"}
           <Pairing />
-        {:else if active === "devices"}
+        {:else if manageTab === "devices"}
           <Devices />
-        {:else if active === "integrations"}
+        {:else if manageTab === "integrations"}
           <Integrations {config} onMutate={refresh} />
-        {:else if active === "activity"}
+        {:else if manageTab === "activity"}
           <Activity {status} onMutate={refresh} />
-        {:else if active === "settings"}
+        {:else if manageTab === "settings"}
           <Settings onMutate={refresh} />
         {/if}
       </main>
@@ -119,6 +139,6 @@
   </div>
 {/if}
 
-{#if confirmCtx.pending}
+{#if confirmCtx.state.pending}
   <ConfirmModal ctx={confirmCtx} />
 {/if}
