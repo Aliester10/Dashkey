@@ -8,6 +8,7 @@ export const ICON = {
   dots: "\u{e1fe}",
   folder: "\u{e256}",
   gear: "\u{e270}",
+  globe: "\u{e288}",
   grid_four: "\u{e296}",
   heart: "\u{e2a8}",
   keyboard: "\u{e2d8}",
