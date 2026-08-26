@@ -23,6 +23,10 @@ export const createButton = (pageId: string, label: string) =>
   invoke<Button>("create_button", { pageId, label });
 export const createAppButton = (pageId: string, app: DetectedApp) =>
   invoke<void>("create_app_button", { pageId, app });
+export const addButtonAt = (pageId: string, button: Button, index: number) =>
+  invoke<void>("add_button_at", { pageId, button, index });
+export const moveButton = (pageId: string, from: number, to: number) =>
+  invoke<void>("move_button", { pageId, from, to });
 export const updateButton = (button: Button) => invoke<void>("update_button", { button });
 export const deleteButton = (buttonId: string) => invoke<void>("delete_button", { buttonId });
 export const setButtonActions = (buttonId: string, actions: unknown[]) =>
@@ -65,6 +69,7 @@ export const setObsSettings = (host: string, port: number, password: string) =>
 export const testObs = () => invoke<string>("test_obs");
 export const listSounds = () => invoke<string[]>("list_sounds");
 export const playSound = (file: string) => invoke<string>("play_sound", { file });
+export const runAction = (action: unknown) => invoke<string>("run_action", { action });
 export const openSoundsFolder = () => invoke<void>("open_sounds_folder");
 export const importSfx = (input: string) => invoke<SfxImport>("import_sfx", { input });
 export const scanApps = () => invoke<DetectedApp[]>("scan_apps");

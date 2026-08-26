@@ -211,6 +211,42 @@ pub fn create_app_button(
     )
 }
 
+/// Tambah tombol (yang sudah dibangun frontend) ke posisi index di page —
+/// dipakai drag & drop ke slot grid yang dipilih.
+#[tauri::command]
+pub fn add_button_at(
+    host: State<'_, ManagedHost>,
+    page_id: String,
+    button: Button,
+    index: usize,
+) -> Result<(), String> {
+    let label = button.label.clone();
+    mutate_config(
+        &host,
+        &format!("Tombol '{label}' ditambahkan ke slot {index}"),
+        move |config| {
+            config
+                .insert_button_at(&page_id, button, index)
+                .map_err(|e| e.to_string())
+        },
+    )
+}
+
+/// Pindahkan tombol antar slot grid (drag & drop tombol di dalam page).
+#[tauri::command]
+pub fn move_button(
+    host: State<'_, ManagedHost>,
+    page_id: String,
+    from: usize,
+    to: usize,
+) -> Result<(), String> {
+    mutate_config(
+        &host,
+        &format!("Tombol dipindahkan (slot {from} → {to})"),
+        move |config| config.move_button(&page_id, from, to).map_err(|e| e.to_string()),
+    )
+}
+
 /// Simpan/upsert seluruh tombol (label, warna, ikon, aksi).
 #[tauri::command]
 pub fn update_button(host: State<'_, ManagedHost>, button: Button) -> Result<(), String> {
@@ -643,6 +679,22 @@ pub fn open_sounds_folder(host: State<'_, ManagedHost>) -> Result<(), String> {
     dashkey_host::system::open_folder(&host.state.executor.sounds_dir());
     host.log("Folder sounds dibuka");
     Ok(())
+}
+
+/// Jalankan satu aksi langsung (media control, open_url, shell, dll.) —
+/// dipakai quick actions di sidebar.
+#[tauri::command]
+pub async fn run_action(host: State<'_, ManagedHost>, action: Action) -> Result<String, String> {
+    let outcome = host.state.executor.execute_async(action).await;
+    if outcome.success {
+        let msg = outcome.message.unwrap_or_else(|| "OK".into());
+        host.log(&msg);
+        Ok(msg)
+    } else {
+        let msg = outcome.message.unwrap_or_else(|| "gagal".into());
+        host.log(&msg);
+        Err(msg)
+    }
 }
 
 /// Impor SFX dari myinstants (URL / iframe HTML) → folder sounds/.

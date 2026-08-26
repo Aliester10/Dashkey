@@ -206,6 +206,53 @@ impl ConfigStore {
         self.save()
     }
 
+    /// Tambah tombol ke page pada posisi index tertentu (drag & drop ke slot
+    /// grid yang dipilih). Index dibatasi ke 0..=len.
+    pub fn insert_button_at(
+        &mut self,
+        page_id: &str,
+        button: Button,
+        index: usize,
+    ) -> anyhow::Result<()> {
+        let page = self
+            .config
+            .pages
+            .get_mut(page_id)
+            .ok_or_else(|| anyhow::anyhow!("page tidak ditemukan: {page_id}"))?;
+        if !page.buttons.contains(&button.button_id) {
+            let index = index.min(page.buttons.len());
+            page.buttons.insert(index, button.button_id.clone());
+        }
+        self.config.buttons.insert(button.button_id.clone(), button);
+        self.save()
+    }
+
+    /// Pindahkan tombol antar slot grid (drag & drop tombol):
+    /// target terisi → swap; target kosong → pindah ke akhir.
+    pub fn move_button(&mut self, page_id: &str, from: usize, to: usize) -> anyhow::Result<()> {
+        let page = self
+            .config
+            .pages
+            .get_mut(page_id)
+            .ok_or_else(|| anyhow::anyhow!("page tidak ditemukan: {page_id}"))?;
+        let len = page.buttons.len();
+        if from >= len {
+            return Err(anyhow::anyhow!("index asal tidak valid: {from} (len {len})"));
+        }
+        if from == to {
+            return Ok(());
+        }
+        if to < len {
+            // Slot tujuan terisi → swap (perilaku Elgato).
+            page.buttons.swap(from, to);
+        } else {
+            // Slot tujuan kosong → pindah ke akhir.
+            let id = page.buttons.remove(from);
+            page.buttons.push(id);
+        }
+        self.save()
+    }
+
     /// Tambah page baru (dipakai GUI desktop).
     pub fn add_page(&mut self, page: Page) -> anyhow::Result<()> {
         if self.config.pages.contains_key(&page.page_id) {
