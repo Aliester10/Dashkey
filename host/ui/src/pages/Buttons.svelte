@@ -9,16 +9,16 @@
     fileIconSrc,
     scanApps,
     setActivePage,
-    setButtonActions,
     setButtonIconFile,
     testButton,
     updateButton,
   } from "../lib/api";
-  import { ACTION_TYPES, BUTTON_COLORS, describeAction, ICON_OPTIONS } from "../lib/constants";
+  import { BUTTON_COLORS, describeAction, ICON_OPTIONS } from "../lib/constants";
   import { getConfirmCtx } from "../lib/confirm.svelte";
   import type { Button, Config, DetectedApp } from "../lib/types";
   import { open } from "@tauri-apps/plugin-dialog";
   import Modal from "../components/Modal.svelte";
+  import ActionEditorModal from "../components/ActionEditorModal.svelte";
 
   const confirm = getConfirmCtx();
 
@@ -34,12 +34,11 @@
   let selectedButtonId = $state<string | null>(null);
   let labelDraft = $state("");
   let showAppPicker = $state(false);
+  let showEditor = $state(false);
   let apps = $state<DetectedApp[]>([]);
   let appSearch = $state("");
   let busy = $state(false);
   let testResult = $state("");
-
-  let editor = $state<{ draftType: string; text: string; media: string; editing: number | null } | null>(null);
 
   const pages = $derived(Object.values(config.pages).sort((a, b) => a.page_id.localeCompare(b.page_id)));
   const page = $derived(config.pages[selectedPage]);
@@ -93,9 +92,7 @@
     if (!selectedButton) return;
     const label = labelDraft.trim();
     if (!label || label === selectedButton.label) return;
-    await mutate(() =>
-      updateButton({ ...selectedButton, label }),
-    );
+    await mutate(() => updateButton({ ...selectedButton, label }));
   }
 
   async function setColor(color: string) {
@@ -163,83 +160,6 @@
     showAppPicker = false;
   }
 
-  // ── Action editor ───────────────────────────────────────────────────
-  function openActionEditor(draftType: string, editing: number | null) {
-    let text = "";
-    let media = "";
-    const actions = selectedButton?.actions ?? [];
-    if (editing !== null && actions[editing]) {
-      const a = actions[editing] as Record<string, unknown>;
-      text = String(a.target ?? a.command ?? (Array.isArray(a.keys) ? a.keys.join(",") : "") ?? "");
-      media = String(a.control ?? (a.force ? "force" : ""));
-    }
-    editor = { draftType, text, media, editing };
-  }
-
-  function buildAction(draftType: string, text: string, media: string): Record<string, unknown> {
-    const t = text.trim();
-    switch (draftType) {
-      case "open_app":
-        return { action_type: "open_app", target: t };
-      case "close_app":
-        return { action_type: "close_app", target: t, force: media === "force" };
-      case "open_url":
-        return { action_type: "open_url", target: t };
-      case "shell":
-        return { action_type: "shell", command: t };
-      case "hotkey":
-        return {
-          action_type: "hotkey",
-          keys: t
-            .split(",")
-            .map((s) => s.trim().toLowerCase())
-            .filter(Boolean),
-        };
-      case "play_sound":
-        return { action_type: "play_sound", target: t };
-      case "media_control":
-        return { action_type: "media_control", control: media };
-      case "obs_switch_scene":
-        return { action_type: "obs_switch_scene", target: t };
-      case "obs_toggle_mute":
-        return { action_type: "obs_toggle_mute", target: t };
-      case "obs_start_stream":
-        return { action_type: "obs_start_stream" };
-      case "obs_stop_stream":
-        return { action_type: "obs_stop_stream" };
-      case "obs_start_recording":
-        return { action_type: "obs_start_recording" };
-      case "obs_stop_recording":
-        return { action_type: "obs_stop_recording" };
-      default:
-        return { action_type: "open_app", target: t };
-    }
-  }
-
-  async function saveAction() {
-    if (!selectedButton || !editor) return;
-    const ed = editor;
-    const actions: unknown[] = [...selectedButton.actions];
-    const action = buildAction(ed.draftType, ed.text, ed.media);
-    if (ed.editing !== null && ed.editing < actions.length) {
-      actions[ed.editing] = action;
-    } else {
-      actions.push(action);
-    }
-    await mutate(() => setButtonActions(selectedButton!.button_id, actions));
-    editor = null;
-  }
-
-  async function actionOp(index: number, op: "del" | "up" | "down") {
-    if (!selectedButton) return;
-    const actions: unknown[] = [...selectedButton.actions];
-    if (op === "del") actions.splice(index, 1);
-    if (op === "up" && index > 0) [actions[index - 1], actions[index]] = [actions[index], actions[index - 1]];
-    if (op === "down" && index + 1 < actions.length) [actions[index], actions[index + 1]] = [actions[index + 1], actions[index]];
-    await mutate(() => setButtonActions(selectedButton!.button_id, actions));
-  }
-
-  const editorType = $derived(ACTION_TYPES.find((t) => t.key === editor?.draftType) ?? ACTION_TYPES[0]);
   const filteredApps = $derived(
     apps.filter((a) => !appSearch || a.name.toLowerCase().includes(appSearch.toLowerCase())),
   );
@@ -247,7 +167,7 @@
 
 <div class="flex h-full flex-col overflow-hidden">
   <!-- Page nav + app picker -->
-  <div class="flex items-center gap-3 border-b border-white/5 bg-surface-1/40 px-6 py-3">
+  <div class="flex items-center gap-3 border-b border-border bg-surface-1/40 px-6 py-3">
     <span class="icon text-[16px] text-accent-soft">{ICON.grid_four}</span>
     <div class="flex items-center gap-1.5">
       {#each pages as p (p.page_id)}
@@ -344,7 +264,7 @@
               <div class="flex flex-wrap gap-2">
                 {#each BUTTON_COLORS as c (c)}
                   <button
-                    class={`h-7 w-7 rounded-lg transition-transform hover:scale-110 ${selectedButton.color === c ? "ring-2 ring-white/60" : ""}`}
+                    class={`h-7 w-7 rounded-lg transition-transform hover:scale-110 ${selectedButton.color === c ? "ring-2 ring-tprimary" : ""}`}
                     style={`background: ${c}`}
                     aria-label={`Warna ${c}`}
                     onclick={() => setColor(c)}
@@ -375,8 +295,11 @@
           <div class="flex flex-col gap-2">
             <div class="flex items-center justify-between">
               <span class="card-caption block">ACTIONS ({selectedButton.actions.length})</span>
-              <button class="neo-chip px-2.5 py-1 text-[11.5px] font-medium text-accent-soft hover:text-tprimary" onclick={() => openActionEditor(ACTION_TYPES[0].key, null)}>
-                + Tambah
+              <button
+                class="neo-chip px-2.5 py-1 text-[11.5px] font-medium text-accent-soft hover:text-tprimary"
+                onclick={() => (showEditor = true)}
+              >
+                Edit Aksi
               </button>
             </div>
             {#if selectedButton.actions.length === 0}
@@ -389,12 +312,6 @@
                     <span class="min-w-0 flex-1 truncate text-[12.5px] text-tsecondary">
                       {describeAction(action)}
                     </span>
-                    <div class="flex shrink-0 items-center gap-1">
-                      <button class="rounded px-1.5 text-[11px] text-tmuted hover:text-tprimary" onclick={() => openActionEditor(String(action.action_type), i)}>Edit</button>
-                      <button class="rounded px-1 text-[11px] text-tmuted hover:text-tprimary" disabled={i === 0} onclick={() => actionOp(i, "up")}>↑</button>
-                      <button class="rounded px-1 text-[11px] text-tmuted hover:text-tprimary" disabled={i === selectedButton.actions.length - 1} onclick={() => actionOp(i, "down")}>↓</button>
-                      <button class="rounded px-1.5 text-[11px] text-coral hover:text-tprimary" onclick={() => actionOp(i, "del")}>Del</button>
-                    </div>
                   </div>
                 {/each}
               </div>
@@ -436,7 +353,7 @@
         <p class="py-4 text-center text-[12.5px] text-tmuted">Tidak ada aplikasi yang cocok.</p>
       {:else}
         {#each filteredApps as app (app.name + app.target)}
-          <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5">
+          <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
             <button class="neo-chip px-2 py-0.5 text-[14px] font-bold text-success" onclick={() => addApp(app)}>+</button>
             <span class="min-w-0 flex-1 truncate text-[13px] text-tprimary">{app.name}</span>
             <span class="max-w-[40%] truncate text-[11px] text-tmuted">{app.target}</span>
@@ -447,66 +364,10 @@
   </Modal>
 {/if}
 
-<!-- Action editor modal -->
-{#if editor && selectedButton}
-  {@const ed = editor}
-  <Modal title={ed.editing !== null ? "Edit action" : "Add new action"} onclose={() => (editor = null)}>
-    <div class="text-[11px] text-tmuted">{selectedButton.button_id}</div>
-    <div class="divider my-3"></div>
-
-    <div class="flex flex-col gap-3">
-      <div>
-        <label class="card-caption block mb-1.5" for="act-type">TYPE</label>
-        <select
-          id="act-type"
-          class="neo-inset w-full px-3 py-2 text-[13px] text-tprimary outline-none"
-          value={ed.draftType}
-          onchange={(e) => (ed.draftType = e.currentTarget.value)}
-        >
-          {#each ACTION_TYPES as t (t.key)}
-            <option value={t.key}>{t.label}</option>
-          {/each}
-        </select>
-      </div>
-
-      {#if editorType.key === "media_control"}
-        <div>
-          <label class="card-caption block mb-1.5" for="act-control">CONTROL</label>
-          <select id="act-control" class="neo-inset w-full px-3 py-2 text-[13px] text-tprimary outline-none" bind:value={ed.media}>
-            {#each ["play_pause", "next", "prev", "stop", "volume_up", "volume_down", "mute"] as c (c)}
-              <option value={c}>{c}</option>
-            {/each}
-          </select>
-        </div>
-      {:else if ["obs_start_stream", "obs_stop_stream", "obs_start_recording", "obs_stop_recording"].includes(editorType.key)}
-        <p class="text-[12.5px] text-tsecondary">Aksi ini tidak memerlukan parameter.</p>
-      {:else}
-        <div>
-          <label class="card-caption block mb-1.5" for="act-target">
-            {editorType.key === "hotkey" ? "KEYS (comma-separated)" : editorType.key === "close_app" ? "PROSES" : "TARGET"}
-          </label>
-          <input
-            id="act-target"
-            bind:value={ed.text}
-            class="neo-inset w-full px-3 py-2 text-[13px] text-tprimary outline-none"
-            placeholder={editorType.hint || "…"}
-          />
-        </div>
-      {/if}
-
-      {#if editorType.key === "close_app"}
-        <label class="flex items-center gap-2 text-[12.5px] text-tsecondary">
-          <input type="checkbox" class="accent-[#00ACC1]" checked={ed.media === "force"} onchange={(e) => (ed.media = e.currentTarget.checked ? "force" : "")} />
-          Force close (paksa, tanpa simpan data)
-        </label>
-      {/if}
-    </div>
-
-    <div class="mt-5 flex justify-end gap-3">
-      <button class="neo-chip px-4 py-2 text-[13px] font-medium text-tsecondary hover:text-tprimary" onclick={() => (editor = null)}>
-        Cancel
-      </button>
-      <button class="btn-primary px-4 py-2" onclick={saveAction}>Save Action</button>
-    </div>
-  </Modal>
+{#if showEditor && selectedButton}
+  <ActionEditorModal
+    button={selectedButton}
+    onMutate={onMutate}
+    onclose={() => (showEditor = false)}
+  />
 {/if}
