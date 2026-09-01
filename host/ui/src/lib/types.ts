@@ -14,7 +14,8 @@ export interface Page {
   page_id: string;
   name: string;
   grid_size: { rows: number; cols: number };
-  buttons: string[];
+  /** Daftar slot grid; index = posisi slot, null = slot kosong. */
+  buttons: (string | null)[];
   page_type: "buttons" | "trackpad";
 }
 
