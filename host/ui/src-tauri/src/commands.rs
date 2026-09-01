@@ -721,12 +721,53 @@ pub async fn import_sfx(
     }
 }
 
-/// Scan ulang aplikasi terpasang.
+/// Scan ulang aplikasi terpasang. Icon shortcut diekstrak ke cache PNG
+/// (Windows); tombol `open_app` yang sudah ada tanpa icon ikut diisi ulang.
 #[tauri::command]
 pub fn scan_apps(host: State<'_, ManagedHost>) -> Result<Vec<DetectedApp>, String> {
     let apps = dashkey_host::apps::detect_apps();
+    backfill_app_icons(&host, &apps);
     host.log(format!("{} aplikasi terdeteksi", apps.len()));
     Ok(apps)
+}
+
+/// Isi `icon` tombol `open_app` yang belum punya icon, cocok dengan target
+/// aplikasi yang terdeteksi (dipakai tombol yang dibuat sebelum icon ada).
+fn backfill_app_icons(host: &ManagedHost, apps: &[DetectedApp]) {
+    let mut changed = false;
+    {
+        let mut config = match config_lock(host) {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        for app in apps {
+            let Some(icon) = app.icon_path.as_deref() else {
+                continue;
+            };
+            for button in config.buttons_mut().values_mut() {
+                if button.icon.is_some() {
+                    continue;
+                }
+                let is_open_app = button.actions.iter().any(|a| {
+                    matches!(
+                        a,
+                        dashkey_host::config::Action::OpenApp { target }
+                            if target == &app.target
+                    )
+                });
+                if is_open_app {
+                    button.icon = Some(format!("file://{icon}"));
+                    changed = true;
+                }
+            }
+        }
+        if changed {
+            let _ = config.save();
+        }
+    }
+    if changed {
+        host.server.broadcast_config_sync();
+    }
 }
 
 // ---------------------------------------------------------------------------
