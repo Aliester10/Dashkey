@@ -39,13 +39,15 @@ export const setActivePage = (pageId: string) => invoke<void>("set_active_page",
 export const testButton = (buttonId: string) => invoke<string>("test_button", { buttonId });
 
 // ── Profiles & Pages ────────────────────────────────────────────────────
-export const createProfile = () => invoke<void>("create_profile");
+export const createProfile = (name?: string) =>
+  invoke<void>("create_profile", { name: name ?? null });
 export const renameProfile = (profileId: string, name: string) =>
   invoke<void>("rename_profile", { profileId, name });
 export const deleteProfile = (profileId: string) => invoke<void>("delete_profile", { profileId });
 export const setActiveProfile = (profileId: string) =>
   invoke<void>("set_active_profile", { profileId });
-export const createPage = (profileId: string) => invoke<void>("create_page", { profileId });
+export const createPage = (profileId: string, name?: string) =>
+  invoke<void>("create_page", { profileId, name: name ?? null });
 export const updatePage = (
   pageId: string,
   name: string,
