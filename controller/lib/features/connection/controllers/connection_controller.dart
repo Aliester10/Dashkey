@@ -15,6 +15,7 @@ import '../../../core/model/config.dart';
 import '../../../core/network/ws_client.dart';
 import '../../../core/protocol/messages.dart';
 import '../../../core/storage/credential_store.dart';
+import '../../pairing/services/host_discovery.dart';
 import '../providers/connection_providers.dart';
 
 /// Fase sesi koneksi.
@@ -204,6 +205,29 @@ class ConnectionController extends Notifier<ConnectionState> {
       state = state.copyWith(
         phase: ConnectionPhase.error,
         lastError: 'Gagal terhubung ke $host:$port — $e',
+      );
+    }
+  }
+
+  /// Pairing tanpa scan QR: host ditemukan via UDP discovery dan membawa
+  /// pair_token segar (Host auto-approve → langsung sukses).
+  Future<void> pairFromDiscovery(DiscoveredHost host) async {
+    state = state.copyWith(
+      phase: ConnectionPhase.connecting,
+      host: host.host,
+      port: host.port,
+    );
+    try {
+      await _ws.connect(host.host, host.port, autoReconnect: true);
+      state = state.copyWith(phase: ConnectionPhase.authenticating);
+      _ws.send(Outbound.pairRequest(
+        pairToken: host.pairToken,
+        deviceName: await _deviceName(),
+      ));
+    } catch (e) {
+      state = state.copyWith(
+        phase: ConnectionPhase.error,
+        lastError: 'Gagal terhubung ke ${host.host}:${host.port} — $e',
       );
     }
   }
