@@ -388,7 +388,10 @@ pub async fn test_button(
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn create_profile(host: State<'_, ManagedHost>) -> Result<(), String> {
+pub fn create_profile(
+    host: State<'_, ManagedHost>,
+    name: Option<String>,
+) -> Result<(), String> {
     let id = format!("profile_{}", now_millis());
     let page_id = format!("page_{}", now_millis() + 1);
     let page = dashkey_host::config::Page {
@@ -400,7 +403,7 @@ pub fn create_profile(host: State<'_, ManagedHost>) -> Result<(), String> {
     };
     let profile = dashkey_host::config::Profile {
         profile_id: id.clone(),
-        name: "Profile Baru".into(),
+        name: name.unwrap_or_else(|| "Profile Baru".into()),
         pages: vec![page_id],
     };
     mutate_config(
@@ -450,10 +453,14 @@ pub fn set_active_profile(host: State<'_, ManagedHost>, profile_id: String) -> R
 }
 
 #[tauri::command]
-pub fn create_page(host: State<'_, ManagedHost>, profile_id: String) -> Result<(), String> {
+pub fn create_page(
+    host: State<'_, ManagedHost>,
+    profile_id: String,
+    name: Option<String>,
+) -> Result<(), String> {
     let page = dashkey_host::config::Page {
         page_id: format!("page_{}", now_millis()),
-        name: "Page Baru".into(),
+        name: name.unwrap_or_else(|| "Page Baru".into()),
         grid_size: dashkey_host::config::GridSize { rows: 4, cols: 4 },
         buttons: vec![],
         page_type: PageType::Buttons,
