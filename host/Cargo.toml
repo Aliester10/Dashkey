@@ -19,7 +19,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1"
 qrcode = { version = "0.14", features = ["image", "svg"] }
-image = { version = "0.25", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png"] }
 sha2 = "0.10"
 hostname = "0.4"
 local-ip-address = "0.6"
@@ -34,6 +34,13 @@ egui_extras = { version = "0.33.0", features = ["all_loaders"], optional = true 
 
 [target.'cfg(windows)'.dependencies]
 enigo = "0.3"
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Storage_FileSystem",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_UI_Shell",
+] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 enigo = { version = "0.3", features = ["x11rb"] }
