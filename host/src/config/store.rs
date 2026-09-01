@@ -40,7 +40,10 @@ pub struct Page {
     pub page_id: String,
     pub name: String,
     pub grid_size: GridSize,
-    pub buttons: Vec<String>,
+    /// Daftar slot grid; index = posisi slot, `None` = slot kosong.
+    /// `Some(id)` deserialisasi juga dari string polos, jadi config lama
+    /// (list padat `["btn_a", ...]`) tetap kompatibel.
+    pub buttons: Vec<Option<String>>,
     /// PRD2: default "buttons" agar config lama tetap kompatibel.
     #[serde(default)]
     pub page_type: PageType,
@@ -184,6 +187,7 @@ impl ConfigStore {
     #[allow(dead_code)]
     pub fn remove_button(&mut self, button_id: &str) -> anyhow::Result<()> {
         self.config.buttons.remove(button_id);
+        clear_button_from_pages(&mut self.config.pages, button_id);
         self.save()
     }
 
@@ -199,15 +203,19 @@ impl ConfigStore {
             .pages
             .get_mut(page_id)
             .ok_or_else(|| anyhow::anyhow!("page tidak ditemukan: {page_id}"))?;
-        if !page.buttons.contains(&button.button_id) {
-            page.buttons.push(button.button_id.clone());
+        if !page
+            .buttons
+            .iter()
+            .any(|s| s.as_deref() == Some(button.button_id.as_str()))
+        {
+            page.buttons.push(Some(button.button_id.clone()));
         }
         self.config.buttons.insert(button.button_id.clone(), button);
         self.save()
     }
 
-    /// Tambah tombol ke page pada posisi index tertentu (drag & drop ke slot
-    /// grid yang dipilih). Index dibatasi ke 0..=len.
+    /// Tambah tombol ke page pada posisi index slot tertentu (drag & drop ke
+    /// slot grid yang dipilih). Slot terisi akan ditimpa.
     pub fn insert_button_at(
         &mut self,
         page_id: &str,
@@ -219,36 +227,53 @@ impl ConfigStore {
             .pages
             .get_mut(page_id)
             .ok_or_else(|| anyhow::anyhow!("page tidak ditemukan: {page_id}"))?;
-        if !page.buttons.contains(&button.button_id) {
-            let index = index.min(page.buttons.len());
-            page.buttons.insert(index, button.button_id.clone());
+        let grid_len = page.grid_size.rows as usize * page.grid_size.cols as usize;
+        if index >= grid_len {
+            return Err(anyhow::anyhow!(
+                "index slot di luar grid {grid_len}: {index}"
+            ));
+        }
+        if !page
+            .buttons
+            .iter()
+            .any(|s| s.as_deref() == Some(button.button_id.as_str()))
+        {
+            ensure_page_slots(page, index + 1);
+            page.buttons[index] = Some(button.button_id.clone());
         }
         self.config.buttons.insert(button.button_id.clone(), button);
         self.save()
     }
 
     /// Pindahkan tombol antar slot grid (drag & drop tombol):
-    /// target terisi → swap; target kosong → pindah ke akhir.
+    /// slot tujuan terisi → swap; kosong → tombol menempati slot itu persis.
     pub fn move_button(&mut self, page_id: &str, from: usize, to: usize) -> anyhow::Result<()> {
         let page = self
             .config
             .pages
             .get_mut(page_id)
             .ok_or_else(|| anyhow::anyhow!("page tidak ditemukan: {page_id}"))?;
-        let len = page.buttons.len();
-        if from >= len {
-            return Err(anyhow::anyhow!("index asal tidak valid: {from} (len {len})"));
+        let grid_len = page.grid_size.rows as usize * page.grid_size.cols as usize;
+        if from >= grid_len || to >= grid_len {
+            return Err(anyhow::anyhow!(
+                "index slot di luar grid {grid_len}: {from} → {to}"
+            ));
         }
         if from == to {
             return Ok(());
         }
-        if to < len {
-            // Slot tujuan terisi → swap (perilaku Elgato).
-            page.buttons.swap(from, to);
+        ensure_page_slots(page, from.max(to) + 1);
+        let Some(moved) = page.buttons[from].take() else {
+            // Slot asal kosong — tidak ada yang dipindah.
+            return Ok(());
+        };
+        let displaced = page.buttons[to].take();
+        page.buttons[to] = Some(moved);
+        if let Some(displaced) = displaced {
+            // Tujuan terisi → swap (perilaku Elgato).
+            page.buttons[from] = Some(displaced);
         } else {
-            // Slot tujuan kosong → pindah ke akhir.
-            let id = page.buttons.remove(from);
-            page.buttons.push(id);
+            trim_page_slots(page);
         }
         self.save()
     }
@@ -442,6 +467,32 @@ impl ConfigStore {
     }
 }
 
+/// Pastikan daftar slot punya panjang minimal `min_len` (slot baru diisi `None`).
+fn ensure_page_slots(page: &mut Page, min_len: usize) {
+    if page.buttons.len() < min_len {
+        page.buttons.resize(min_len, None);
+    }
+}
+
+/// Buang slot kosong di ujung agar list slot tetap padat dari awal.
+fn trim_page_slots(page: &mut Page) {
+    while page.buttons.last().map_or(false, |s| s.is_none()) {
+        page.buttons.pop();
+    }
+}
+
+/// Hapus tombol dari seluruh slot page (dipakai saat tombol dihapus).
+pub fn clear_button_from_pages(pages: &mut HashMap<String, Page>, button_id: &str) {
+    for page in pages.values_mut() {
+        for slot in &mut page.buttons {
+            if slot.as_deref() == Some(button_id) {
+                *slot = None;
+            }
+        }
+        trim_page_slots(page);
+    }
+}
+
 /// Validasi referensial config (mitigasi risiko PRD §11).
 /// Aturan:
 /// - setidaknya satu profile & satu page.
@@ -496,7 +547,8 @@ pub fn validate_config(config: &Config) -> Result<(), String> {
             ));
         }
         let mut seen = std::collections::HashSet::new();
-        for button_id in &page.buttons {
+        for slot in &page.buttons {
+            let Some(button_id) = slot else { continue };
             if !seen.insert(button_id) {
                 return Err(format!("page {page_id} punya tombol duplikat: {button_id}"));
             }
@@ -564,7 +616,10 @@ impl Default for Config {
             page_id: "page_main".into(),
             name: "Main".into(),
             grid_size: GridSize { rows: 4, cols: 4 },
-            buttons: vec!["btn_open_url".into(), "btn_hotkey_test".into()],
+            buttons: vec![
+                Some("btn_open_url".into()),
+                Some("btn_hotkey_test".into()),
+            ],
             page_type: PageType::Buttons,
         };
         let page_media = Page {
@@ -572,12 +627,12 @@ impl Default for Config {
             name: "Media".into(),
             grid_size: GridSize { rows: 3, cols: 3 },
             buttons: vec![
-                "btn_media_play".into(),
-                "btn_media_next".into(),
-                "btn_media_prev".into(),
-                "btn_media_volup".into(),
-                "btn_media_voldown".into(),
-                "btn_media_mute".into(),
+                Some("btn_media_play".into()),
+                Some("btn_media_next".into()),
+                Some("btn_media_prev".into()),
+                Some("btn_media_volup".into()),
+                Some("btn_media_voldown".into()),
+                Some("btn_media_mute".into()),
             ],
             page_type: PageType::Buttons,
         };
@@ -586,9 +641,9 @@ impl Default for Config {
             name: "OBS Control".into(),
             grid_size: GridSize { rows: 3, cols: 3 },
             buttons: vec![
-                "btn_obs_mute_mic".into(),
-                "btn_obs_stream".into(),
-                "btn_obs_recording".into(),
+                Some("btn_obs_mute_mic".into()),
+                Some("btn_obs_stream".into()),
+                Some("btn_obs_recording".into()),
             ],
             page_type: PageType::Buttons,
         };
@@ -766,7 +821,7 @@ mod tests {
             .get_mut("page_main")
             .unwrap()
             .buttons
-            .push("btn_hantu".into());
+            .push(Some("btn_hantu".into()));
         let err = validate_config(&cfg).unwrap_err();
         assert!(err.contains("btn_hantu"));
     }
@@ -791,6 +846,68 @@ mod tests {
         let mut cfg = Config::default();
         cfg.active_page = "page_hantu".into();
         assert!(validate_config(&cfg).is_err());
+    }
+
+    #[test]
+    fn move_button_places_exactly_on_empty_slot() {
+        let mut store = ConfigStore {
+            path: PathBuf::from("/tmp/dashkey-move-config.json"),
+            config: Config::default(),
+        };
+        // page_main 4x4: [open_url, hotkey] di slot 0 dan 1.
+        store.move_button("page_main", 0, 9).unwrap();
+        let page = store.snapshot().pages["page_main"].clone();
+        assert_eq!(page.buttons[9].as_deref(), Some("btn_open_url"));
+        assert_eq!(page.buttons[0], None);
+        assert_eq!(page.buttons.len(), 10);
+        assert_eq!(page.buttons[1].as_deref(), Some("btn_hotkey_test"));
+    }
+
+    #[test]
+    fn move_button_swaps_on_occupied_slot() {
+        let mut store = ConfigStore {
+            path: PathBuf::from("/tmp/dashkey-move2-config.json"),
+            config: Config::default(),
+        };
+        store.move_button("page_main", 0, 1).unwrap();
+        let page = store.snapshot().pages["page_main"].clone();
+        assert_eq!(page.buttons[0].as_deref(), Some("btn_hotkey_test"));
+        assert_eq!(page.buttons[1].as_deref(), Some("btn_open_url"));
+    }
+
+    #[test]
+    fn move_button_back_and_forth_with_hole() {
+        let mut store = ConfigStore {
+            path: PathBuf::from("/tmp/dashkey-move3-config.json"),
+            config: Config::default(),
+        };
+        // Pindah ke slot kosong, lalu pindahkan lagi ke slot terisi → swap.
+        store.move_button("page_main", 1, 5).unwrap();
+        store.move_button("page_main", 5, 0).unwrap();
+        let page = store.snapshot().pages["page_main"].clone();
+        assert_eq!(page.buttons[0].as_deref(), Some("btn_hotkey_test"));
+        assert_eq!(page.buttons[5].as_deref(), Some("btn_open_url"));
+        assert_eq!(page.buttons[1], None);
+    }
+
+    #[test]
+    fn move_button_rejects_out_of_grid() {
+        let mut store = ConfigStore {
+            path: PathBuf::from("/tmp/dashkey-move4-config.json"),
+            config: Config::default(),
+        };
+        assert!(store.move_button("page_main", 0, 16).is_err());
+        assert!(store.move_button("page_main", 16, 0).is_err());
+    }
+
+    #[test]
+    fn old_compact_buttons_config_still_loads() {
+        let raw = r#"{"page_id":"p1","name":"Lama","grid_size":{"rows":4,"cols":4},"buttons":["btn_a","btn_b"],"page_type":"buttons"}"#;
+        let page: Page = serde_json::from_str(raw).unwrap();
+        assert_eq!(
+            page.buttons,
+            vec![Some("btn_a".into()), Some("btn_b".into())]
+        );
     }
 
     #[test]
