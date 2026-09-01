@@ -75,7 +75,7 @@ class _EditorHomeScreenState extends ConsumerState<EditorHomeScreen> {
         .firstWhere((p) => p['profile_id'] == activeProfileId);
     final profilePages = (profile['pages'] as List).cast<String>();
     final page = pages[activePageId] as Map<String, dynamic>;
-    final pageButtons = (page['buttons'] as List).cast<String>();
+    final pageButtons = (page['buttons'] as List).whereType<String>().toList();
 
     return Scaffold(
       appBar: AppBar(

@@ -73,7 +73,7 @@ class PagesProfilesScreen extends ConsumerWidget {
                     ),
                     subtitle: Text(
                       'Grid ${(entry.value['grid_size'] as Map)['rows']}x${(entry.value['grid_size'] as Map)['cols']} • '
-                      '${(entry.value['buttons'] as List).length} tombol',
+                      '${(entry.value['buttons'] as List).whereType<String>().length} tombol',
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
