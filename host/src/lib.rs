@@ -31,6 +31,9 @@ use state::AppState;
 /// Port default sesuai konvensi DashKey.
 pub const DEFAULT_PORT: u16 = 48484;
 
+/// Port UDP untuk discovery otomatis (controller mencari host tanpa scan QR).
+pub const DISCOVERY_PORT: u16 = 48485;
+
 /// Direktori data Host (config, device registry).
 /// Windows: %APPDATA%\DashKey; Linux/macOS: ~/.config/dashkey.
 pub fn data_dir() -> PathBuf {

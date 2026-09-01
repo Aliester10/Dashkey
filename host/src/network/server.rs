@@ -126,6 +126,13 @@ impl Server {
 
     /// Loop utama: terima koneksi masuk, spawn task per koneksi.
     pub async fn run(self: Arc<Self>) -> anyhow::Result<()> {
+        // UDP discovery berjalan paralel (auto-deteksi host oleh controller).
+        let discovery = Arc::clone(&self);
+        tokio::spawn(async move {
+            if let Err(e) = discovery.run_discovery().await {
+                error!(error = %e, "UDP discovery berhenti");
+            }
+        });
         loop {
             match self.listener.accept().await {
                 Ok((stream, peer)) => {
@@ -157,6 +164,46 @@ impl Server {
                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
+        }
+    }
+
+    /// UDP discovery — menjawab `dashkey_discover_v1` dari Controller dengan
+    /// `dashkey_hello` (host, port, nama, versi + pair_token segar) sehingga
+    /// controller bisa pairing tanpa scan QR (auto-approve aktif di Host).
+    async fn run_discovery(self: Arc<Self>) -> anyhow::Result<()> {
+        self.run_discovery_on(crate::DISCOVERY_PORT).await
+    }
+
+    async fn run_discovery_on(self: Arc<Self>, port: u16) -> anyhow::Result<()> {
+        use tokio::net::UdpSocket;
+
+        let socket = UdpSocket::bind(("0.0.0.0", port)).await?;
+        info!(
+            port,
+            "UDP discovery aktif — controller bisa mendeteksi host tanpa QR"
+        );
+        let mut buf = [0u8; 512];
+        loop {
+            let (len, peer) = socket.recv_from(&mut buf).await?;
+            if &buf[..len] != b"dashkey_discover_v1" {
+                continue;
+            }
+            let port = self
+                .listener
+                .local_addr()
+                .map(|a| a.port())
+                .unwrap_or(crate::DEFAULT_PORT);
+            let payload = serde_json::json!({
+                "type": "dashkey_hello",
+                "host": self.state.host_ip,
+                "port": port,
+                "host_name": self.state.host_name,
+                "version": env!("CARGO_PKG_VERSION"),
+                "pair_token": self.state.pairing.generate_token(),
+            });
+            let raw = payload.to_string();
+            let _ = socket.send_to(raw.as_bytes(), peer).await;
+            debug!(%peer, "discovery request → hello terkirim");
         }
     }
 
@@ -712,5 +759,69 @@ impl Server {
             }
         }
         OutboundMessage::ConfigSync { profiles: value }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// UDP discovery: kirim magic → terima `dashkey_hello` berisi host/port/
+    /// host_name/versi + pair_token segar (bisa langsung dipakai pairing).
+    #[tokio::test]
+    async fn discovery_responds_with_hello() {
+        use std::sync::Arc;
+
+        let state = Arc::new(
+            crate::state::AppState::init(std::path::Path::new("/tmp/dashkey-disc-test"), true)
+                .unwrap(),
+        );
+        let server = Arc::new(
+            Server::bind("127.0.0.1:0", state)
+                .await
+                .expect("server bind"),
+        );
+        let tcp_port = server.local_addr().unwrap().port();
+
+        // Ambil port UDP kosong (binder → drop → pakai ulang).
+        let probe = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let udp_port = probe.local_addr().unwrap().port();
+        drop(probe);
+
+        let discovery = Arc::clone(&server);
+        let task = tokio::spawn(async move {
+            discovery.run_discovery_on(udp_port).await.unwrap();
+        });
+
+        let client = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        client
+            .send_to(b"dashkey_discover_v1", ("127.0.0.1", udp_port))
+            .await
+            .unwrap();
+
+        let mut buf = [0u8; 1024];
+        let (len, _) = tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            client.recv_from(&mut buf),
+        )
+        .await
+        .expect("harus ada jawaban hello")
+        .unwrap();
+
+        let hello: serde_json::Value =
+            serde_json::from_slice(&buf[..len]).expect("jawaban harus JSON");
+        assert_eq!(hello["type"], "dashkey_hello");
+        assert_eq!(hello["port"], tcp_port as u64);
+        assert!(!hello["host"].as_str().unwrap_or("").is_empty());
+        assert!(!hello["host_name"].as_str().unwrap_or("").is_empty());
+        assert!(!hello["version"].as_str().unwrap_or("").is_empty());
+        let token = hello["pair_token"].as_str().unwrap_or("");
+        assert!(!token.is_empty(), "pair_token harus ada");
+
+        // Token dari hello valid & auto-approve → langsung Approved.
+        let validation = server.state.pairing.validate_token(token);
+        assert_eq!(validation, crate::auth::TokenValidation::Approved);
+
+        task.abort();
     }
 }
