@@ -172,6 +172,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
           itemCount: page.buttons.length,
           itemBuilder: (context, i) {
             final buttonId = page.buttons[i];
+            if (buttonId == null) return const SizedBox.shrink();
             final button = config.buttons[buttonId];
             if (button == null) return const SizedBox.shrink();
             final dynamic = conn.buttonStates[buttonId];

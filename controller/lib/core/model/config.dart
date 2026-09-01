@@ -56,7 +56,8 @@ class PageDef {
   final String pageId;
   final String name;
   final GridSizeDef gridSize;
-  final List<String> buttons;
+  /// Daftar slot grid; index = posisi slot, `null` = slot kosong.
+  final List<String?> buttons;
 
   /// PRD2: "buttons" (grid) atau "trackpad".
   final String pageType;
@@ -69,7 +70,7 @@ class PageDef {
         gridSize: GridSizeDef.fromJson(
           json['grid_size'] as Map<String, dynamic>? ?? {},
         ),
-        buttons: (json['buttons'] as List?)?.cast<String>() ?? [],
+        buttons: (json['buttons'] as List?)?.map((e) => e as String?).toList() ?? [],
         pageType: json['page_type'] as String? ?? 'buttons',
       );
 
@@ -245,12 +246,12 @@ class ConfigData {
   /// Page aktif; null jika config kosong.
   PageDef? get currentPage => pages[activePage];
 
-  /// Tombol-tombol milik page aktif, berurutan.
+  /// Tombol-tombol milik page aktif, berurutan (slot kosong dilewati).
   List<ButtonDef> get currentButtons {
     final page = currentPage;
     if (page == null) return [];
     return page.buttons
-        .map((id) => buttons[id])
+        .map((id) => id == null ? null : buttons[id])
         .whereType<ButtonDef>()
         .toList();
   }
