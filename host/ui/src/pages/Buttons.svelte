@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { onDestroy, onMount, untrack } from "svelte";
   import { ICON } from "../lib/icons";
   import {
     addPlaySound,
@@ -7,6 +7,7 @@
     createButton,
     deleteButton,
     fileIconSrc,
+    moveButton,
     scanApps,
     setActivePage,
     setButtonIconFile,
@@ -39,6 +40,78 @@
   let appSearch = $state("");
   let busy = $state(false);
   let testResult = $state("");
+
+  // Drag & drop tombol antar slot grid (pointer events — stabil di WebView2).
+  let dragTile = $state<{ buttonId: string; fromIdx: number; startX: number; startY: number } | null>(null);
+  let dragPayload = $state<{ buttonId: string; fromIdx: number; label: string } | null>(null);
+  let dragPos = $state<{ x: number; y: number } | null>(null);
+  let dropTarget = $state<number | null>(null);
+  let suppressClick = $state(false);
+
+  onMount(() => {
+    window.addEventListener("pointermove", windowPointerMove);
+    window.addEventListener("pointerup", windowPointerUp);
+    window.addEventListener("pointercancel", endDrag);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("pointermove", windowPointerMove);
+    window.removeEventListener("pointerup", windowPointerUp);
+    window.removeEventListener("pointercancel", endDrag);
+  });
+
+  function tilePointerDown(e: PointerEvent, buttonId: string, slotIdx: number) {
+    if (e.button !== 0) return;
+    dragTile = { buttonId, fromIdx: slotIdx, startX: e.clientX, startY: e.clientY };
+    suppressClick = false;
+  }
+
+  function slotAt(x: number, y: number): number | null {
+    const el = document.elementFromPoint(x, y);
+    const tile = el?.closest("[data-slot]") as HTMLElement | null;
+    if (!tile) return null;
+    const idx = Number(tile.dataset.slot);
+    return Number.isInteger(idx) ? idx : null;
+  }
+
+  function windowPointerMove(e: PointerEvent) {
+    if (!dragPayload) {
+      if (dragTile && Math.hypot(e.clientX - dragTile.startX, e.clientY - dragTile.startY) > 5) {
+        const btn = config.buttons[dragTile.buttonId];
+        dragPayload = {
+          buttonId: dragTile.buttonId,
+          fromIdx: dragTile.fromIdx,
+          label: btn?.label || "…",
+        };
+        dragPos = { x: e.clientX, y: e.clientY };
+        dropTarget = null;
+      }
+      return;
+    }
+    dragPos = { x: e.clientX, y: e.clientY };
+    dropTarget = slotAt(e.clientX, e.clientY);
+  }
+
+  function endDrag() {
+    dragPayload = null;
+    dragPos = null;
+    dropTarget = null;
+    dragTile = null;
+  }
+
+  function windowPointerUp() {
+    if (!dragPayload) {
+      dragTile = null;
+      return;
+    }
+    const payload = dragPayload;
+    const idx = dropTarget;
+    endDrag();
+    suppressClick = true;
+    if (idx !== null && idx !== payload.fromIdx) {
+      mutate(() => moveButton(selectedPage, payload.fromIdx, idx));
+    }
+  }
 
   const pages = $derived(Object.values(config.pages).sort((a, b) => a.page_id.localeCompare(b.page_id)));
   const page = $derived(config.pages[selectedPage]);
@@ -80,7 +153,11 @@
     await onMutate();
   }
 
-  function clickTile(buttonId: string | undefined) {
+  function clickTile(buttonId: string | null) {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
     if (buttonId && config.buttons[buttonId]) {
       selectedButtonId = selectedButtonId === buttonId ? null : buttonId;
     } else {
@@ -148,6 +225,8 @@
 
   async function rescanApps() {
     apps = await scanApps();
+    // Backend bisa mengisi icon tombol app yang sudah ada → ambil ulang config.
+    await onMutate();
   }
 
   function openAppPicker() {
@@ -197,12 +276,12 @@
           {@const btnId = pageButtons[i]}
           {@const btn = btnId ? config.buttons[btnId] : undefined}
           <button
-            class="flex h-[74px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-center transition-all"
-            class:neo-raised={!btn || !btn.actions.length}
-            class:ring-2={selectedButtonId === btnId}
-            class:ring-accent-soft={selectedButtonId === btnId}
+            data-slot={i}
+            class={`flex h-[74px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-center transition-all ${!btn || !btn.actions.length ? "neo-raised" : ""} ${selectedButtonId === btnId ? "ring-2 ring-accent-soft" : dropTarget === i ? "ring-2 ring-accent" : ""}`}
+            class:cursor-grab={!!btn}
             style={btn ? `background: ${btn.color}22; box-shadow: inset 0 0 0 1px ${btn.color}55;` : ""}
             onclick={() => clickTile(btnId)}
+            onpointerdown={btn ? (e) => tilePointerDown(e, btn.button_id, i) : undefined}
           >
             {#if btn}
               {#if btn.icon?.startsWith("file://") && fileIconSrc(btn.icon)}
@@ -370,4 +449,15 @@
     onMutate={onMutate}
     onclose={() => (showEditor = false)}
   />
+{/if}
+
+<!-- Ghost saat drag -->
+{#if dragPayload && dragPos}
+  <div
+    class="pointer-events-none fixed z-[70] flex items-center gap-2 rounded-xl bg-accent/90 px-3 py-2 text-[12.5px] font-semibold text-btn-text shadow-lg"
+    style={`left: ${dragPos.x + 14}px; top: ${dragPos.y + 14}px;`}
+  >
+    <span class="icon text-[14px]">{ICON.squares_four}</span>
+    <span class="max-w-[180px] truncate">{dragPayload.label}</span>
+  </div>
 {/if}
