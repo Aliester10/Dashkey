@@ -257,3 +257,26 @@ body {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--border), transparent);
 }
+
+/* ── Field input premium (flat, focus ring lembut) ──────────────────── */
+.field-input {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-0);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--tprimary);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.field-input::placeholder {
+  color: var(--tmuted);
+}
+.field-input:hover {
+  border-color: var(--tmuted);
+}
+.field-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--surface-1);
+}
