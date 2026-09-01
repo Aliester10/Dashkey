@@ -58,7 +58,8 @@ Future<void> main(List<String> args) async {
   final config = syncMsg.payload?['profiles'] as Map<String, dynamic>;
   final pages = config['pages'] as Map<String, dynamic>;
   final activePage = config['active_page'] as String;
-  final firstButton = ((pages[activePage] as Map)['buttons'] as List).first;
+  final firstButton =
+      ((pages[activePage] as Map)['buttons'] as List).whereType<String>().first;
   print('--- button_press $firstButton ---');
   conn.send(Outbound.buttonPress(buttonId: firstButton, pageId: activePage));
 

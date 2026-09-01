@@ -74,5 +74,20 @@ void main() {
       final config = ConfigData.fromJson(raw2);
       expect(config.currentButtons.map((b) => b.label), ['B', 'A']);
     });
+
+    test('slot kosong (null) ditangani tanpa crash', () {
+      final raw2 = jsonDecode(jsonEncode(raw)) as Map<String, dynamic>;
+      (raw2['pages'] as Map)['page_main'] = {
+        'page_id': 'page_main',
+        'name': 'Main',
+        'grid_size': {'rows': 4, 'cols': 4},
+        'buttons': [null, 'btn_mute_mic', null, null, 'btn_mute_mic'],
+      };
+      final config = ConfigData.fromJson(raw2);
+      expect(config.currentPage?.buttons.length, 5);
+      expect(config.currentPage?.buttons[1], 'btn_mute_mic');
+      expect(config.currentButtons.length, 2);
+      expect(config.currentButtons.first.label, 'Mute Mic');
+    });
   });
 }
