@@ -322,9 +322,7 @@ impl DesktopGui {
         let button_id = self.selected_button.clone();
         self.mutate(move |config| {
             config.buttons_mut().remove(&button_id);
-            for page in config.pages_mut().values_mut() {
-                page.buttons.retain(|b| b != &button_id);
-            }
+            crate::config::clear_button_from_pages(config.pages_mut(), &button_id);
         });
         self.selected_button.clear();
         self.log_event("Tombol dihapus");

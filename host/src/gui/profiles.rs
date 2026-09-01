@@ -151,7 +151,10 @@ impl DesktopGui {
                                                             "{}×{}  ·  {} tombol",
                                                             page.grid_size.rows,
                                                             page.grid_size.cols,
-                                                            page.buttons.len()
+                                                            page.buttons
+                                                                .iter()
+                                                                .filter(|s| s.is_some())
+                                                                .count()
                                                         ))
                                                         .color(Palette::TEXT_MUTED)
                                                         .size(11.0),

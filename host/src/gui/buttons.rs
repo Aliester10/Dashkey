@@ -554,7 +554,7 @@ impl DesktopGui {
                                 ui.spacing_mut().item_spacing.x = TILE_GAP;
                                 for col in 0..grid_cols {
                                     let slot_idx = row * grid_cols + col;
-                                    match page_buttons.get(slot_idx) {
+                                    match page_buttons.get(slot_idx).and_then(|s| s.as_deref()) {
                                         Some(btn_id) => {
                                             match snapshot.buttons.get(btn_id) {
                                                 Some(button) => {
@@ -575,7 +575,7 @@ impl DesktopGui {
                                                         if sel {
                                                             self.selected_button.clear();
                                                         } else {
-                                                            self.selected_button = btn_id.clone();
+                                                            self.selected_button = btn_id.to_string();
                                                         }
                                                     }
                                                 }
