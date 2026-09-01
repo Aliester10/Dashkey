@@ -6,13 +6,17 @@
     addPlaySound,
     createButton,
     createPage,
+    createProfile,
     deleteButton,
+    deletePage,
+    deleteProfile,
     fileIconSrc,
     getSnapshot,
     listSounds,
     moveButton,
     openSoundsFolder,
     playSound,
+    renameProfile,
     runAction,
     scanApps,
     setActivePage,
@@ -20,6 +24,7 @@
     setButtonIconFile,
     testButton,
     updateButton,
+    updatePage,
   } from "../lib/api";
   import { BUTTON_COLORS, describeAction, ICON_OPTIONS } from "../lib/constants";
   import { getConfirmCtx } from "../lib/confirm.svelte";
@@ -27,6 +32,7 @@
   import type { Action, Button, Config, DetectedApp, Page, StatusPayload } from "../lib/types";
   import { open } from "@tauri-apps/plugin-dialog";
   import ActionEditorModal from "../components/ActionEditorModal.svelte";
+  import Modal from "../components/Modal.svelte";
   import SidebarSection from "../components/SidebarSection.svelte";
 
   const confirm = getConfirmCtx();
@@ -51,6 +57,8 @@
   let showEditor = $state(false);
   let testResult = $state("");
   let dropTarget = $state<number | null>(null);
+  let folderModal = $state<{ mode: "create" | "rename"; name: string } | null>(null);
+  let profileModal = $state<{ mode: "create" | "rename"; name: string } | null>(null);
 
   // Accordion sidebar
   let appsOpen = $state(false);
@@ -133,6 +141,8 @@
     appsBusy = true;
     try {
       apps = await scanApps();
+      // Backend bisa mengisi icon tombol app yang sudah ada → ambil ulang config.
+      await onMutate();
     } finally {
       appsBusy = false;
     }
@@ -180,7 +190,7 @@
     await onMutate();
   }
 
-  function clickTile(buttonId: string | undefined) {
+  function clickTile(buttonId: string | null) {
     if (suppressClick) {
       suppressClick = false;
       return;
@@ -198,6 +208,41 @@
     await mutate(() => setActiveProfile(profileId));
   }
 
+  function openCreateProfile() {
+    profileModal = { mode: "create", name: "" };
+  }
+
+  function openRenameProfile() {
+    if (!activeProfile) return;
+    profileModal = { mode: "rename", name: activeProfile.name };
+  }
+
+  async function submitProfile() {
+    if (!profileModal) return;
+    const m = profileModal;
+    const name = m.name.trim() || "Profile Baru";
+    profileModal = null;
+    if (m.mode === "create") {
+      await mutate(() => createProfile(name));
+    } else if (activeProfile) {
+      await mutate(() => renameProfile(activeProfile.profile_id, name));
+    }
+  }
+
+  async function deleteCurrentProfile() {
+    if (config.profiles.length <= 1) return;
+    const prof = activeProfile;
+    if (!prof) return;
+    const ok = await confirm.requestConfirm({
+      title: "Hapus profile?",
+      message: `Profile "${prof.name}" akan dihapus beserta page yang tidak dipakai.`,
+      confirmLabel: "Hapus",
+      danger: true,
+    });
+    if (!ok) return;
+    await mutate(() => deleteProfile(prof.profile_id));
+  }
+
   async function goPrevPage() {
     if (pageIdx > 0) await selectPage(profilePages[pageIdx - 1].page_id);
   }
@@ -208,13 +253,44 @@
     }
   }
 
-  async function createFolder() {
-    if (!activeProfile) return;
-    await mutate(() => createPage(activeProfile.profile_id));
-    const updated = await getSnapshot();
-    const prof = updated.profiles.find((p) => p.profile_id === updated.active_profile);
-    const lastPage = prof?.pages[prof.pages.length - 1];
-    if (lastPage) await selectPage(lastPage);
+  function openCreateFolder() {
+    folderModal = { mode: "create", name: "" };
+  }
+
+  function openRenameFolder() {
+    if (!page) return;
+    folderModal = { mode: "rename", name: page.name };
+  }
+
+  async function submitFolder() {
+    if (!folderModal) return;
+    const m = folderModal;
+    const name = m.name.trim() || "Page Baru";
+    folderModal = null;
+    if (m.mode === "create") {
+      if (!activeProfile) return;
+      await mutate(() => createPage(activeProfile.profile_id, name));
+      const updated = await getSnapshot();
+      const prof = updated.profiles.find((p) => p.profile_id === updated.active_profile);
+      const lastPage = prof?.pages[prof.pages.length - 1];
+      if (lastPage) await selectPage(lastPage);
+    } else if (page) {
+      await mutate(() =>
+        updatePage(page.page_id, name, page.grid_size.rows, page.grid_size.cols, page.page_type),
+      );
+    }
+  }
+
+  async function deleteCurrentFolder() {
+    if (!page || profilePages.length <= 1) return;
+    const ok = await confirm.requestConfirm({
+      title: "Hapus folder?",
+      message: `Folder "${page.name}" dan semua tombol di dalamnya akan dihapus.`,
+      confirmLabel: "Hapus",
+      danger: true,
+    });
+    if (!ok) return;
+    await mutate(() => deletePage(page.page_id));
   }
 
   // ── Drag & drop (pointer events) ─────────────────────────────────────
@@ -456,16 +532,43 @@
     <!-- NAVIGATION (selalu tampil) -->
     <div class="border-b border-border px-4 py-3">
       <label class="card-caption block mb-1.5" for="deck-profile">PROFILE</label>
-      <select
-        id="deck-profile"
-        class="neo-inset w-full px-2.5 py-1.5 text-[12.5px] text-tprimary outline-none"
-        value={config.active_profile}
-        onchange={(e) => switchProfile(e.currentTarget.value)}
-      >
-        {#each config.profiles as p (p.profile_id)}
-          <option value={p.profile_id}>{p.name}</option>
-        {/each}
-      </select>
+      <div class="flex items-center gap-1.5">
+        <select
+          id="deck-profile"
+          class="neo-inset min-w-0 flex-1 px-2.5 py-1.5 text-[12.5px] text-tprimary outline-none"
+          value={config.active_profile}
+          onchange={(e) => switchProfile(e.currentTarget.value)}
+        >
+          {#each config.profiles as p (p.profile_id)}
+            <option value={p.profile_id}>{p.name}</option>
+          {/each}
+        </select>
+        <button
+          class="neo-chip flex h-7 w-7 shrink-0 items-center justify-center text-[12px] text-accent-soft hover:text-tprimary"
+          title="Profile baru"
+          aria-label="Profile baru"
+          onclick={openCreateProfile}
+        >
+          <span class="icon">{ICON.plus}</span>
+        </button>
+        <button
+          class="neo-chip flex h-7 w-7 shrink-0 items-center justify-center text-[12px] text-tsecondary hover:text-tprimary"
+          title="Rename profile"
+          aria-label="Rename profile"
+          onclick={openRenameProfile}
+        >
+          <span class="icon">{ICON.pencil}</span>
+        </button>
+        <button
+          class="neo-chip flex h-7 w-7 shrink-0 items-center justify-center text-[12px] text-coral hover:text-tprimary disabled:opacity-40"
+          title={config.profiles.length <= 1 ? "Profile terakhir tidak bisa dihapus" : "Hapus profile"}
+          aria-label="Hapus profile"
+          disabled={config.profiles.length <= 1}
+          onclick={deleteCurrentProfile}
+        >
+          <span class="icon">{ICON.trash}</span>
+        </button>
+      </div>
 
       <div class="mt-3 flex items-center justify-between gap-2">
         <button
@@ -501,7 +604,7 @@
 
       <button
         class="neo-chip mt-3 flex w-full items-center justify-center gap-2 px-3 py-2 text-[12px] font-medium text-tsecondary hover:text-tprimary"
-        onclick={createFolder}
+        onclick={openCreateFolder}
       >
         <span class="icon text-[13px]">{ICON.folder}</span>
         <span>Create folder</span>
@@ -649,6 +752,27 @@
       <div class="flex items-center gap-3">
         <span class="text-[13px] font-semibold text-tprimary">{page?.name ?? "Deck"}</span>
         <span class="text-[11.5px] text-tmuted">· {rows}×{cols}</span>
+        {#if page}
+          <div class="ml-1 flex items-center gap-1">
+            <button
+              class="neo-chip flex h-7 w-7 items-center justify-center text-[12px] text-tsecondary hover:text-tprimary"
+              title="Rename folder"
+              aria-label="Rename folder"
+              onclick={openRenameFolder}
+            >
+              <span class="icon">{ICON.pencil}</span>
+            </button>
+            <button
+              class="neo-chip flex h-7 w-7 items-center justify-center text-[12px] text-coral hover:text-tprimary disabled:opacity-40"
+              title={profilePages.length <= 1 ? "Folder terakhir tidak bisa dihapus" : "Hapus folder"}
+              aria-label="Hapus folder"
+              disabled={profilePages.length <= 1}
+              onclick={deleteCurrentFolder}
+            >
+              <span class="icon">{ICON.trash}</span>
+            </button>
+          </div>
+        {/if}
       </div>
       <div class="flex items-center gap-2 text-[12.5px]">
         <span class="inline-block h-2.5 w-2.5 rounded-full" class:bg-success={online} class:bg-tmuted={!online}></span>
@@ -787,6 +911,50 @@
     <span class="icon text-[14px]">{dragPayload.kind === "app" ? ICON.monitor : dragPayload.kind === "sound" ? ICON.music : dragPayload.kind === "action" ? ICON.lightning : ICON.squares_four}</span>
     <span class="max-w-[180px] truncate">{dragPayload.label}</span>
   </div>
+{/if}
+
+{#if profileModal}
+  <Modal
+    title={profileModal.mode === "create" ? "Profile baru" : "Rename profile"}
+    onclose={() => (profileModal = null)}
+  >
+    <label class="card-caption block mb-1.5" for="profile-name">Nama profile</label>
+    <input
+      id="profile-name"
+      bind:value={profileModal.name}
+      class="neo-inset w-full px-3 py-2 text-[13px] text-tprimary outline-none"
+      placeholder="mis. Streaming, Gaming, Kerja…"
+      onkeydown={(e) => e.key === "Enter" && submitProfile()}
+    />
+    <div class="mt-5 flex justify-end gap-3">
+      <button class="neo-chip px-4 py-2 text-[13px] font-medium text-tsecondary hover:text-tprimary" onclick={() => (profileModal = null)}>
+        Batal
+      </button>
+      <button class="btn-primary px-4 py-2" onclick={submitProfile}>Simpan</button>
+    </div>
+  </Modal>
+{/if}
+
+{#if folderModal}
+  <Modal
+    title={folderModal.mode === "create" ? "Folder baru" : "Rename folder"}
+    onclose={() => (folderModal = null)}
+  >
+    <label class="card-caption block mb-1.5" for="folder-name">Nama folder</label>
+    <input
+      id="folder-name"
+      bind:value={folderModal.name}
+      class="neo-inset w-full px-3 py-2 text-[13px] text-tprimary outline-none"
+      placeholder="mis. Gaming, Streaming, Kerja…"
+      onkeydown={(e) => e.key === "Enter" && submitFolder()}
+    />
+    <div class="mt-5 flex justify-end gap-3">
+      <button class="neo-chip px-4 py-2 text-[13px] font-medium text-tsecondary hover:text-tprimary" onclick={() => (folderModal = null)}>
+        Batal
+      </button>
+      <button class="btn-primary px-4 py-2" onclick={submitFolder}>Simpan</button>
+    </div>
+  </Modal>
 {/if}
 
 {#if showEditor && selectedButton}
